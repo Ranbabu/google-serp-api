@@ -1,8 +1,7 @@
-import express from "express";
-import { googleDesktopSerpConfig } from "./googleConfig.js";  // नीचे अलग दे दूँगा
+ import express from "express";
+import { googleDesktopSerpConfig } from "./googleConfig.js";
 import CheerioTree from "cheerio-tree";
 
-// Express server
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -12,61 +11,62 @@ app.get("/api/v1/google/serp", async (req, res) => {
   try {
     const { gotScraping } = await import("got-scraping");
 
-    const { q, locale = "en", device = "desktop" } = req.query;
+    // FIXED QUERY PARSING
+    const q = String(req.query.q || "");
+    const locale = req.query.locale ? String(req.query.locale) : "en";
+    const device = req.query.device ? String(req.query.device) : "desktop";
 
-    if (!q) {
+    if (!q.trim()) {
       return res.status(400).json({ error: "Missing parameter: q" });
     }
 
-    // Build Google SERP URL
+    // Build SERP URL
     let serpUrl = "https://www.google.com/search?q=" + encodeURIComponent(q);
-
-    for (const [key, value] of Object.entries(req.query)) {
-      if (key !== "q") serpUrl += `&${key}=${value}`;
-    }
     serpUrl += "&ie=UTF-8";
 
-    // Scraping Headers & Options
+    // FIXED SAFE OPTIONS
     const options = {
       url: serpUrl,
       headers: {
         "User-Agent":
           device === "mobile"
-            ? "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+            ? "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Safari/537.36"
             : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
 
-        "Accept-Language": locale,
+        "Accept-Language": locale
       },
       timeout: 20000
     };
 
-    // Scrape Google SERP
+    // SCRAPE GOOGLE
     const { statusCode, body } = await gotScraping(options);
 
     if (statusCode !== 200) {
       return res.status(statusCode).json({
-        error: "Google Status Error",
-        statusCode,
+        error: "Google Response Error",
+        statusCode
       });
     }
 
-    // CheerioTree Parsing
+    // PARSE HTML USING CHEERIOTREE
     const tree = new CheerioTree({ body });
     const data = tree.parse({ config: googleDesktopSerpConfig });
 
     const loadtime = ((Date.now() - startTime) / 1000).toFixed(2);
-    res.setHeader("x-load-time", loadtime + "s");
 
-    res.json({
+    return res.json({
       q,
-      device,
       locale,
+      device,
       loadtime,
       results: data
     });
+
   } catch (error) {
-    console.error("Server Error:", error);
-    return res.status(500).json({ error: "Server Crashed", details: error.toString() });
+    return res.status(500).json({
+      error: "Server Crashed",
+      details: error.toString()
+    });
   }
 });
 
@@ -75,7 +75,7 @@ app.get("/", (req, res) => {
   res.send("Google SERP Scraper API is running!");
 });
 
-// Start Server
+// Start server
 app.listen(PORT, () => {
   console.log("Server running on port:", PORT);
-});
+});   

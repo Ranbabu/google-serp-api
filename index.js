@@ -1,6 +1,6 @@
 import express from "express";
 import { googleDesktopSerpConfig } from "./googleConfig.js";
-import CheerioTree from "cheerio-tree";
+import { CheerioTree } from "cheerio-tree";  // ✔ FIXED: Correct import
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,9 +9,10 @@ app.get("/api/v1/google/serp", async (req, res) => {
   const startTime = Date.now();
 
   try {
+    // ✔ FIXED: Safe import
     const { gotScraping } = await import("got-scraping");
 
-    // FORCE SAFE STRING VALUES
+    // ✔ FIXED: Force-safe values (Render crashes without this)
     const q = String(req.query.q || "");
     const locale = String(req.query.locale || "en");
     const device = String(req.query.device || "desktop");
@@ -20,29 +21,23 @@ app.get("/api/v1/google/serp", async (req, res) => {
       return res.status(400).json({ error: "Missing parameter: q" });
     }
 
-    // BUILD URL
+    // ✔ SERP URL
     const serpUrl = `https://www.google.com/search?q=${encodeURIComponent(q)}&ie=UTF-8`;
 
-    // FINAL SAFE OPTIONS (NO NUMBERS!)
+    // ✔ FIXED options (must be a plain object)
     const options = {
       url: serpUrl,
       headers: {
         "User-Agent":
           device === "mobile"
-            ? String(
-                "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Safari/537.36"
-              )
-            : String(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
-              ),
-        "Accept-Language": String(locale)
+            ? "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+            : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        "Accept-Language": locale
       }
     };
 
-    // SCRAPING
+    // ✔ SCRAPING (no destructuring)
     const response = await gotScraping(options);
-
-    // response is not destructured anymore (avoids type errors)
     const statusCode = response.statusCode;
     const body = response.body;
 
@@ -53,19 +48,20 @@ app.get("/api/v1/google/serp", async (req, res) => {
       });
     }
 
-    // PARSE HTML
+    // ✔ CheerioTree Parser (correct constructor)
     const tree = new CheerioTree({ body });
     const data = tree.parse({ config: googleDesktopSerpConfig });
 
     const loadtime = ((Date.now() - startTime) / 1000).toFixed(2);
 
-    res.json({
+    return res.json({
       q,
       locale,
       device,
       loadtime,
       results: data
     });
+
   } catch (error) {
     return res.status(500).json({
       error: "Server Crashed",
@@ -74,11 +70,12 @@ app.get("/api/v1/google/serp", async (req, res) => {
   }
 });
 
-// HOME ROUTE
+// ✔ Default Route
 app.get("/", (req, res) => {
   res.send("Google SERP Scraper API is running!");
 });
 
+// ✔ Start Server
 app.listen(PORT, () => {
   console.log("Server running on port:", PORT);
 });

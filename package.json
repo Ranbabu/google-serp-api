@@ -1,0 +1,14 @@
+{
+  "name": "google-serp-api",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "got-scraping": "^3.2.4",
+    "cheerio-tree": "^1.0.0"
+  }
+}

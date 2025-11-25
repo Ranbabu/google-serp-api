@@ -2,288 +2,263 @@
 <html lang="hi">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ImageSearchMan — DDG Proxy</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>ImageSearchMan — Images & Short Clips</title>
+<meta name="description" content="ImageSearchMan - DuckDuckGo images (via proxy) + quick video preview. Mobile-first app-like UI." />
 <style>
   :root{
-    --bg:#eef6ff;
-    --card:#ffffff;
-    --accent:#0f172a;
-    --primary:#009dff;
-    --pill:#dff3ff;
+    --bg: linear-gradient(135deg, #f2fbfb, #e0f7fa, #b2ebf2, #fff8e1, #f3e5f5);
+    --card: rgba(255,255,255,0.95);
+    --muted: #6b7280;
+    --accent: #072b2a;
+    --primary: #06b6d4;
+    --secondary: #10b981;
+    --tertiary: #f59e0b;
+    --glass: rgba(255,255,255,0.85);
+    --shadow: 0 4px 20px rgba(6,182,196,0.2);
+    --glow: 0 0 20px rgba(6,182,196,0.4);
   }
-  body{
-    margin:0;
-    background:var(--bg);
-    font-family:system-ui,Segoe UI,Roboto;
-    color:var(--accent);
-  }
-  .topbar{
-    position:fixed;
-    top:0; left:0; right:0;
-    background:white;
-    padding:14px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    box-shadow:0 2px 6px rgba(0,0,0,0.06);
-    z-index:1000;
-  }
-  .logo{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-size:20px;
-    font-weight:700;
-  }
-  .logo-box{
-    width:42px;height:42px;border-radius:10px;
-    background:#10b981;
-    color:white;
-    display:flex;align-items:center;justify-content:center;
-    font-size:20px;font-weight:700;
-  }
-  .clear-btn{
-    padding:8px 14px;border-radius:10px;
-    border:2px solid var(--primary);
-    color:var(--primary);
-    background:white;
-    font-weight:600;
-  }
-  .wrap{
-    margin-top:90px;
-    padding:18px;
-  }
-  .search-box{
-    background:white;
-    padding:14px;
-    border-radius:16px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.06);
-  }
-  .search-row{
-    display:flex;gap:10px;
-  }
-  input{
-    flex:1;
-    padding:12px;
-    border-radius:10px;
-    border:1px solid #cbd5e1;
-    font-size:17px;
-  }
-  .search-btn{
-    background:var(--primary);
-    color:white;
-    border:0;
-    padding:12px 16px;
-    border-radius:12px;
-    font-size:16px;
-    font-weight:700;
-  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;padding:0;font-family:Inter,system-ui,Roboto,Arial;color:var(--accent);-webkit-font-smoothing:antialiased}
+  body{background:var(--bg);animation: gradientShift 15s ease infinite, floatParticles 20s linear infinite;}
+  @keyframes gradientShift { 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
+  @keyframes floatParticles { 0%{background-position:0% 0%;} 100%{background-position:100% 100%;} }
 
-  .tabs{
-    margin-top:14px;
-    display:flex;
-    gap:10px;
-  }
-  .tab{
-    padding:10px 16px;
-    border-radius:20px;
-    background:#f1f5f9;
-    font-weight:600;
-    cursor:pointer;
-  }
-  .tab.active{ background:#009dff; color:white; }
+  /* Particles - dynamic dots */
+  body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: radial-gradient(2px 2px at 20px 30px, #06b6d4, transparent), radial-gradient(2px 2px at 40px 70px, rgba(16,185,129,0.8), transparent), radial-gradient(1px 1px at 90px 40px, #f59e0b, transparent); background-repeat: repeat; background-size: 100px 100px; opacity: 0.1; pointer-events: none; z-index: -1; animation: drift 30s linear infinite; }
+  @keyframes drift { from { transform: translate(0,0); } to { transform: translate(100px,100px); } }
 
-  .history{ margin-top:14px;}
-  .h-btn{
-    display:inline-block;
-    background:var(--pill);
-    padding:10px 14px;
-    border-radius:14px;
-    margin:4px 4px;
-    font-weight:600;
-    cursor:pointer;
+  /* App frame */
+  .frame{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  header.appbar{
+    position:fixed;top:0;left:0;right:0;height:72px;padding:12px 14px;display:flex;align-items:center;gap:12px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.95), rgba(224,247,250,0.9));
+    border-bottom:1px solid rgba(7,43,42,0.1);z-index:60;backdrop-filter:blur(15px);box-shadow:var(--shadow)
   }
+  .logo{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary),var(--tertiary));display:grid;place-items:center;color:white;font-weight:800;font-size:16px;animation: pulseGlow 2s infinite alternate;}
+  @keyframes pulseGlow { 0%{transform:scale(1);box-shadow:0 0 5px var(--glow);} 100%{transform:scale(1.1);box-shadow:0 0 25px var(--glow);} }
+  .app-title{font-weight:800;font-size:16px;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation: shimmer 3s infinite;}
+  @keyframes shimmer { 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
+  .app-sub{font-size:12px;color:var(--muted)}
+  main.content{flex:1;margin-top:72px;margin-bottom:78px;overflow:auto;padding:18px 14px}
 
-  .grid{
-    margin-top:20px;
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:14px;
-  }
-  .card{
-    background:white;border-radius:12px;overflow:hidden;
-    box-shadow:0 2px 8px rgba(0,0,0,0.07);
-  }
-  .thumb{
-    width:100%;height:160px;object-fit:cover;
-  }
-  .info{ padding:10px;font-size:14px;color:#555; }
+  /* Hero */
+  .hero-wrap{display:flex;justify-content:center}
+  .hero{width:100%;max-width:920px;background:var(--glass);border-radius:20px;padding:16px;border:1px solid rgba(7,43,42,0.1);box-shadow:var(--shadow);backdrop-filter:blur(15px);animation: fadeInUp 0.8s ease;}
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(30px);} to{opacity:1;transform:translateY(0);} }
+  .search-row{display:flex;gap:8px;align-items:center}
+  .search-input{flex:1;padding:14px 16px;border-radius:16px;border:1px solid rgba(7,43,42,0.15);font-size:16px;transition:all 0.3s;background:var(--glass);box-shadow:inset 0 2px 10px rgba(0,0,0,0.05);}
+  .search-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(6,182,196,0.2), inset 0 2px 10px rgba(0,0,0,0.05);transform:scale(1.01);}
+  .btn{padding:12px 16px;border-radius:16px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;}
+  .btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent, rgba(255,255,255,0.2), transparent);transition:0.5s;}
+  .btn:hover::before{left:100%;} .btn:hover{transform:translateY(-2px) scale(1.05);box-shadow:var(--glow);}
+  .btn.solid{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;border:0}
+  .tabs{display:flex;gap:8px;margin-top:12px}
+  .tab{padding:10px 16px;border-radius:20px;border:2px solid rgba(7,43,42,0.15);background:transparent;cursor:pointer;font-weight:700;transition:all 0.3s;}
+  .tab:hover{background:rgba(6,182,196,0.1);transform:translateY(-1px);}
+  .tab.active{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;border-color:var(--primary);box-shadow:var(--glow);transform:scale(1.05);}
 
-  .footer{
-    margin-top:40px;
-    text-align:center;
-    color:#777;
-    padding-bottom:40px;
-  }
-  .proxy-tag{
-    background:var(--primary);
-    padding:8px 18px;
-    color:white;
-    border-radius:14px;
-    font-weight:bold;
-  }
+  /* History */
+  .history{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:linear-gradient(135deg,rgba(6,182,196,0.15),rgba(16,185,129,0.15));border:1px solid rgba(6,182,196,0.25);padding:10px 14px;border-radius:20px;color:var(--primary);font-weight:700;cursor:pointer;transition:all 0.3s;transform-style:preserve-3d;}
+  .chip:hover{transform:rotateY(10deg) scale(1.05);box-shadow:var(--glow);}
+
+  /* Grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}
+  .card{background:var(--card);border-radius:20px;border:1px solid rgba(7,43,42,0.1);overflow:hidden;display:flex;flex-direction:column;transition:all 0.5s;perspective:1000px;animation:cardSlide 0.6s ease forwards;}
+  .card:hover{transform:rotateY(5deg) translateY(-10px) scale(1.03);box-shadow:0 20px 50px rgba(6,182,196,0.3);}
+  @keyframes cardSlide { from{opacity:0;transform:translateX(50px) rotateY(-10deg);} to{opacity:1;transform:translateX(0) rotateY(0);} }
+  .thumb{width:100%;height:160px;object-fit:cover;display:block;transition:transform 0.5s;}
+  .card:hover .thumb{transform:scale(1.1) rotate(2deg);}
+  .card .meta{padding:14px;font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:10px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .smallBtn{padding:8px 12px;border-radius:12px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer;transition:all 0.3s;}
+  .smallBtn:hover{background:var(--primary);color:white;transform:scale(1.1);box-shadow:0 4px 15px rgba(6,182,196,0.3);}
+
+  /* Loader */
+  #loader{display:none;text-align:center;padding:30px;}
+  .spinner{display:inline-block;width:50px;height:50px;border:4px solid rgba(6,182,196,0.3);border-top:4px solid var(--primary);border-radius:50%;animation:spin 1s linear infinite;}
+  @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+  .progress-bar{background:linear-gradient(90deg,var(--primary),var(--secondary));height:4px;border-radius:2px;animation:progress 2s ease-in-out infinite;}
+  @keyframes progress{0%{width:0%;}50%{width:70%;}100%{width:100%;}}
+
+  /* Video area */
+  .video-panel{margin-top:16px}
+  .video-links{display:flex;gap:8px;flex-wrap:wrap}
+  .video-preview{margin-top:12px;animation:fadeIn 0.5s;}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;place-items:center;z-index:120;animation:fadeIn 0.4s;}
+  .modal.show{display:grid}
+  .modalCard{width:95%;max-width:920px;background:var(--card);border-radius:20px;padding:20px;box-shadow:0 30px 60px rgba(0,0,0,0.3);transform:scale(0.8);animation:zoomIn 0.4s forwards;}
+  @keyframes zoomIn{to{transform:scale(1);}}
+  .modalImg{max-width:100%;max-height:70vh;border-radius:16px;display:block;animation:imgZoom 0.5s ease;}
+
+  /* Footer */
+  footer.appfoot{position:fixed;left:0;right:0;bottom:0;height:78px;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(224,247,250,0.95));display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid rgba(7,43,42,0.1);z-index:60}
+  .powered{display:flex;gap:8px;align-items:center}
+  .powered .badge{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;padding:10px;border-radius:12px;font-weight:800;animation:pulseGlow 2s infinite alternate;}
+
+  /* Responsive */
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:420px){.grid{grid-template-columns:1fr}.thumb{height:200px}.hero{padding:12px}}
 </style>
 </head>
-
 <body>
+<div class="frame">
+  <header class="appbar">
+    <div class="logo">IS</div>
+    <div style="flex:1">
+      <div class="app-title">ImageSearchMan</div>
+      <div class="app-sub">Images · Short clips · Quick preview</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="clearHistoryBtn" class="btn" title="Clear history">Clear</button>
+    </div>
+  </header>
 
-<div class="topbar">
-  <div class="logo">
-    <div class="logo-box">IS</div>
-    ImageSearchMan
-  </div>
-  <button class="clear-btn" onclick="localStorage.clear();location.reload()">Clear</button>
-</div>
+  <main class="content" role="main">
+    <div class="hero-wrap">
+      <div class="hero" aria-label="Search card">
+        <div class="search-row">
+          <input id="q" class="search-input" placeholder="खोजें — जैसे: 'बिहार वोट चोरी' या 'प्रधानमंत्री योजना' " />
+          <button id="searchBtn" class="btn solid">Search</button>
+        </div>
 
-<div class="wrap">
-  <div class="search-box">
+        <div class="tabs" style="justify-content:space-between;align-items:center">
+          <div style="display:flex;gap:8px">
+            <button id="tabImages" class="tab active">Images</button>
+            <button id="tabVideos" class="tab">Videos</button>
+          </div>
+          <div style="font-size:13px;color:var(--muted)">App-like dynamic interface ✨</div>
+        </div>
 
-    <div class="search-row">
-      <input id="q" placeholder="खोजें — जैसे: 'प्रधानमंत्री मोदी' " />
-      <button id="search" class="search-btn">Search</button>
+        <div id="historyWrap" class="history" aria-hidden="false"></div>
+      </div>
     </div>
 
-    <div class="tabs">
-      <div id="tabImg" class="tab active">Images</div>
-      <div id="tabVid" class="tab">Videos</div>
+    <!-- Images area -->
+    <div id="imagesArea" style="margin-top:12px">
+      <div id="loader"><div class="spinner"></div><div style="margin-top:12px;color:var(--muted)">लोड कर रहे हैं…</div><div class="progress-bar" style="margin-top:10px;width:0%;"></div></div>
+      <div id="grid" class="grid" aria-live="polite"></div>
+      <div style="text-align:center;margin-top:16px"><button id="moreBtn" class="btn" style="display:none">और दिखाओ</button></div>
     </div>
 
-    <div id="history" class="history"></div>
-  </div>
+    <!-- Videos area -->
+    <div id="videosArea" style="display:none;margin-top:12px">
+      <div class="video-panel">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="videoUrl" placeholder="वीडियो URL डालें (YouTube या mp4) — preview & thumbnail" style="flex:1;padding:12px;border-radius:12px;border:1px solid rgba(7,43,42,0.1);background:var(--glass)" />
+          <button id="previewBtn" class="btn">Preview</button>
+        </div>
 
-  <div id="loader" style="display:none;margin-top:20px;text-align:center;color:#777;">लोड हो रहा है…</div>
+        <div style="margin-top:10px;font-size:13px;color:var(--muted)">Quick opens:</div>
+        <div class="video-links" style="margin-top:8px">
+          <button id="openDuck" class="smallBtn">DuckDuckGo Videos</button>
+          <button id="openYou" class="smallBtn">YouTube</button>
+          <button id="openBing" class="smallBtn">Bing Videos</button>
+        </div>
 
-  <div id="grid" class="grid"></div>
+        <div id="videoPreview" class="video-preview"></div>
+      </div>
+    </div>
+  </main>
 
+  <footer class="appfoot">
+    <div class="powered"><div style="font-weight:700">Powered by</div><div class="badge">DDG Proxy</div></div>
+    <div style="font-size:13px;color:var(--muted)">© ImageSearchMan — Dynamic Render Proxy 2025</div>
+  </footer>
 </div>
 
-<div class="footer">
-  Powered by <span class="proxy-tag">DDG Proxy</span><br>
-  © ImageSearchMan — Render Proxy Enabled
+<!-- Modal -->
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="modalCard">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Preview</div>
+      <div><button id="closeModal" class="btn">Close</button></div>
+    </div>
+    <div id="modalBody" style="margin-top:16px;display:grid;place-items:center;min-height:200px"></div>
+    <div id="modalMeta" style="margin-top:12px;color:var(--muted)"></div>
+  </div>
 </div>
 
 <script>
-/* ------------------------------------
-   CORRECT WORKING PROXY URL
---------------------------------------*/
-const PROXY_URL = "https://google-serp-api-bp7z.onrender.com";
+/* Updated single-file HTML - Beautiful dynamic UI with animations */
+/* --------- PROXY URL --------- */
+const PROXY_URL = "https://google-serp-api-bp7z.onrender.com"; // आपका URL
+/* ----------------------------- */
 
-/* DOM */
-const qInput = document.getElementById("q");
-const grid = document.getElementById("grid");
-const loader = document.getElementById("loader");
-const historyBox = document.getElementById("history");
+// DOM (same)
+const qInput = document.getElementById('q');
+const searchBtn = document.getElementById('searchBtn');
+const tabImages = document.getElementById('tabImages');
+const tabVideos = document.getElementById('tabVideos');
+const grid = document.getElementById('grid');
+const loader = document.getElementById('loader');
+const moreBtn = document.getElementById('moreBtn');
+const historyWrap = document.getElementById('historyWrap');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const imagesArea = document.getElementById('imagesArea');
+const videosArea = document.getElementById('videosArea');
+const videoUrl = document.getElementById('videoUrl');
+const previewBtn = document.getElementById('previewBtn');
+const openDuck = document.getElementById('openDuck');
+const openYou = document.getElementById('openYou');
+const openBing = document.getElementById('openBing');
+const videoPreview = document.getElementById('videoPreview');
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modalBody');
+const modalMeta = document.getElementById('modalMeta');
+const closeModal = document.getElementById('closeModal');
 
-let mode = "img";
 let currentQ = "";
+let offset = 0;
 
-/* HISTORY */
-function saveHist(q){
-  let h = JSON.parse(localStorage.getItem("hist")||"[]");
-  h = h.filter(x=>x!==q);
-  h.unshift(q);
-  if(h.length>10) h = h.slice(0,10);
-  localStorage.setItem("hist", JSON.stringify(h));
-  renderHist();
-}
-function renderHist(){
-  let h = JSON.parse(localStorage.getItem("hist")||"[]");
-  historyBox.innerHTML = h.map(x=>`<div class="h-btn" onclick="setHist('${x}')">${x}</div>`).join("");
-}
-function setHist(x){ qInput.value=x; searchNow(); }
+// Auto wake-up
+fetch(PROXY_URL).catch(()=>{});
 
-/* FETCH IMAGES */
-async function fetchImages(q){
-  const url = `${PROXY_URL}/api/images?q=${encodeURIComponent(q)}&s=0`;
-  const res = await fetch(url);
-  return res.json();
-}
+// History (same)
+function loadHistory(){const arr=JSON.parse(localStorage.getItem('ism_hist')||'[]');if(arr.length===0){historyWrap.innerHTML='';return;}historyWrap.innerHTML=arr.map(q=>`<div class="chip" onclick="startFromHistory('${encodeURIComponent(q)}')">${escapeHtml(q)}</div>`).join('');}
+function saveHistory(q){if(!q)return;let arr=JSON.parse(localStorage.getItem('ism_hist')||'[]');arr=arr.filter(x=>x!==q);arr.unshift(q);if(arr.length>20)arr=arr.slice(0,20);localStorage.setItem('ism_hist',JSON.stringify(arr));loadHistory();}
+function startFromHistory(enc){qInput.value=decodeURIComponent(enc);doSearch();}
+clearHistoryBtn.addEventListener('click',()=>{localStorage.removeItem('ism_hist');loadHistory();});
 
-/* VIDEO FETCH (simple links) */
-async function fetchVideos(q){
-  return [
-    {title:`${q} — YouTube`, thumb:`https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg`, link:`https://www.youtube.com/results?search_query=${q}`},
-    {title:`${q} — DuckDuckGo`, thumb:`https://duckduckgo.com/assets/logo_header.v108.png`, link:`https://duckduckgo.com/?q=${q}&ia=videos`}
-  ];
-}
+// Tabs (smooth transition)
+tabImages.addEventListener('click',()=>{tabImages.classList.add('active');tabVideos.classList.remove('active');imagesArea.style.display='block';videosArea.style.display='none';imagesArea.style.opacity='0';setTimeout(()=>imagesArea.style.transition='opacity 0.3s',10);setTimeout(()=>imagesArea.style.opacity='1',20);});
+tabVideos.addEventListener('click',()=>{tabVideos.classList.add('active');tabImages.classList.remove('active');videosArea.style.display='block';imagesArea.style.display='none';videosArea.style.opacity='0';setTimeout(()=>videosArea.style.transition='opacity 0.3s',10);setTimeout(()=>videosArea.style.opacity='1',20);});
 
-/* SEARCH */
-async function searchNow(){
-  const q = qInput.value.trim();
-  if(!q) return alert("कोई शब्द डालें!");
-  
-  currentQ = q;
-  grid.innerHTML = "";
-  loader.style.display = "block";
-  
-  saveHist(q);
+// Escape
+function escapeHtml(s){if(!s)return'';return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);}
 
-  if(mode === "img"){
-    try{
-      let data = await fetchImages(q);
-      loader.style.display = "none";
+// Fetch images
+async function fetchImages(q,s=0){loader.style.display='block';const progress=document.querySelector('.progress-bar');progress.style.width='0%';let prog=0;const interval=setInterval(()=>{prog+=10;if(prog<=100)progress.style.width=prog+'%';},100);try{const url=`${PROXY_URL}/api/images?q=${encodeURIComponent(q)}&s=${s}`;const res=await fetch(url);if(!res.ok)throw new Error(`Status ${res.status}`);const data=await res.json();clearInterval(interval);progress.style.width='100%';setTimeout(()=>loader.style.display='none',500);if(data.error)throw new Error(data.error);return data;}catch(err){clearInterval(interval);loader.style.display='none';console.error('Fetch error',err);grid.innerHTML=`<div style="padding:20px;color:var(--muted);text-align:center;border-radius:12px;background:var(--glass)">❌ एरर: ${err.message}. प्रॉक्सी चेक करें।</div>`;throw err;}}
 
-      if(!data.results || data.results.length===0){
-        grid.innerHTML = "<div style='grid-column:1/-1;color:#777'>कोई चित्र नहीं मिला</div>";
-        return;
-      }
+// Make card (with stagger)
+function makeCard(item,index){const div=document.createElement('div');div.className='card';div.style.animationDelay=`${index*0.1}s`;const img=item.thumbnail||item.image||'';const title=(item.title||'').slice(0,80);const source=item.source||item.url||'';div.innerHTML=`<img class="thumb" src="${escapeHtml(img)}" alt="${escapeHtml(title)}" loading="lazy" /><div class="meta"><div style="font-weight:700">${escapeHtml(title)}</div><div style="font-size:12px;color:var(--muted)">Source: ${escapeHtml(source)}</div><div class="actions"><button class="smallBtn" data-src="${escapeHtml(item.image||img)}" data-title="${escapeHtml(title)}">Preview</button><a class="smallBtn" href="${item.image||img||'#'}" target="_blank" rel="noreferrer" download>Download</a><button class="smallBtn">Copy link</button><a class="smallBtn" href="${item.url||source||'#'}" target="_blank" rel="noreferrer">Open</a></div></div>`;const previewBtn=div.querySelector('button');previewBtn.addEventListener('click',()=>openPreview(previewBtn.getAttribute('data-src'),previewBtn.getAttribute('data-title')));const copyBtn=div.querySelectorAll('button')[1];copyBtn.addEventListener('click',()=>{const link=previewBtn.getAttribute('data-src')||'';if(!link)return alert('Link missing');navigator.clipboard?.writeText(link).then(()=>alert('✅ Link copied!')).catch(()=>prompt('Copy this:',link));});return div;}
 
-      data.results.forEach(it=>{
-        grid.innerHTML += `
-          <div class="card" onclick="window.open('${it.url}','_blank')">
-            <img class="thumb" src="${it.image||it.thumbnail}" />
-            <div class="info">${it.title||''}</div>
-          </div>`;
-      });
+// Preview modal
+function openPreview(src,title){if(!src)return alert('No image');modalBody.innerHTML=`<img class="modalImg" src="${src}" alt="${escapeHtml(title)}" />`;modalMeta.innerHTML=`<div style="margin-top:12px;display:flex;gap:8px;justify-content:center"><a class="btn" href="${src}" target="_blank" rel="noreferrer">Open image</a><a class="btn solid" href="${src}" download>Download</a></div>`;modal.classList.add('show');}
+closeModal.addEventListener('click',()=>modal.classList.remove('show'));modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show');});
 
-    }catch(e){
-      loader.style.display="none";
-      alert("Server error (maybe waking up). फिर try करें।");
-    }
-  }
+// Do search
+async function doSearch(){const q=qInput.value.trim();if(!q)return alert('कृपया खोज शब्द डालें');currentQ=q;offset=0;grid.innerHTML='';saveHistory(q);try{const data=await fetchImages(q,offset);if(!data||!data.results||data.results.length===0){grid.innerHTML=`<div style="padding:20px;color:var(--muted);text-align:center;border-radius:12px;background:var(--glass)">😔 कोई चित्र नहीं मिला। अलग कीवर्ड ट्राई करें।</div>`;moreBtn.style.display='none';return;}data.results.forEach((item,index)=>{const card=makeCard(item,index);grid.appendChild(card);});moreBtn.style.display=data.next?'inline-block':'none';}catch(e){}}
+searchBtn.addEventListener('click',doSearch);qInput.addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
 
-  if(mode === "vid"){
-    let vids = await fetchVideos(q);
-    loader.style.display="none";
+moreBtn.addEventListener('click',async()=>{offset+=100;try{const data=await fetchImages(currentQ,offset);if(data&&data.results){data.results.forEach((item,index)=>{const card=makeCard(item,grid.children.length+index);grid.appendChild(card);});moreBtn.style.display=data.next?'inline-block':'none';}else{moreBtn.style.display='none';}}catch(e){}});
 
-    vids.forEach(v=>{
-      grid.innerHTML += `
-        <div class="card" onclick="window.open('${v.link}','_blank')">
-          <img class="thumb" src="${v.thumb}" />
-          <div class="info">${v.title}</div>
-        </div>`;
-    });
-  }
-}
+// Video preview (enhanced)
+function extractYouTubeID(url){if(!url)return null;const m=url.match(/(?:v=|\/embed\/|\.be\/|v\/)([A-Za-z0-9_-]{6,})/);return m?m[1]:null;}
+previewBtn.addEventListener('click',()=>{const url=(videoUrl.value||'').trim();if(!url)return alert('कृपया video URL डालें');videoPreview.innerHTML='';const yt=extractYouTubeID(url);if(yt){const thumb=`https://img.youtube.com/vi/${yt}/hqdefault.jpg`;videoPreview.innerHTML=`<div style="background:var(--card);padding:16px;border-radius:16px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);animation:fadeIn 0.5s;"><img src="${thumb}" style="width:160px;height:90px;object-fit:cover;border-radius:12px" /><div style="flex:1"><div style="font-weight:700">YouTube Preview</div><div style="margin-top:10px;display:flex;gap:8px"><button class="smallBtn" onclick="window.open('https://www.youtube.com/watch?v=${yt}','_blank')">Open</button><a class="smallBtn" href="${thumb}" download>Thumbnail DL</a><button class="smallBtn" onclick="embedYou('${yt}')">Embed</button></div></div></div>`;return;}if(url.match(/\.mp4($|\?)/i)){videoPreview.innerHTML=`<div style="background:var(--card);padding:16px;border-radius:16px;box-shadow:var(--shadow);animation:fadeIn 0.5s;"><video controls style="width:100%;max-height:350px;border-radius:12px"><source src="${url}" type="video/mp4">समर्थन नहीं</video><div style="margin-top:12px;text-align:center"><a class="btn solid" href="${url}" download>डाउनलोड वीडियो</a></div></div>`;return;}videoPreview.innerHTML=`<div style="padding:16px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);text-align:center">❌ Preview नहीं। <a href="${url}" target="_blank" class="smallBtn">Open source</a></div>`;});
 
-/* EVENTS */
-document.getElementById("search").onclick = searchNow;
+function embedYou(id){modalBody.innerHTML=`<iframe width="100%" height="450" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="border-radius:12px;"></iframe>`;modalMeta.innerHTML=`<div style="margin-top:12px;text-align:center"><a class="btn" href="https://www.youtube.com/watch?v=${id}" target="_blank">YouTube पर खोलें</a></div>`;modal.classList.add('show');}
 
-document.getElementById("tabImg").onclick = ()=>{
-  mode="img";
-  tabImg.classList.add("active");
-  tabVid.classList.remove("active");
-};
-document.getElementById("tabVid").onclick = ()=>{
-  mode="vid";
-  tabVid.classList.add("active");
-  tabImg.classList.remove("active");
-};
+// Quick opens
+openDuck.addEventListener('click',()=>{const q=encodeURIComponent(currentQ||qInput.value.trim()||'');if(!q)return alert('पहले खोजें');window.open(`https://duckduckgo.com/?q=${q}&iax=videos&ia=videos`,'_blank');});
+openYou.addEventListener('click',()=>{const q=encodeURIComponent(currentQ||qInput.value.trim()||'');if(!q)return alert('पहले खोजें');window.open(`https://www.youtube.com/results?search_query=${q}`,'_blank');});
+openBing.addEventListener('click',()=>{const q=encodeURIComponent(currentQ||qInput.value.trim()||'');if(!q)return alert('पहले खोजें');window.open(`https://www.bing.com/videos/search?q=${q}`,'_blank');});
 
-renderHist();
+// Init
+loadHistory();
 </script>
-
 </body>
 </html>

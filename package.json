@@ -1,7 +1,7 @@
 {
   "name": "ddg-proxy-server",
   "version": "1.0.0",
-  "description": "DuckDuckGo image proxy for client apps (for Render deployment)",
+  "description": "DuckDuckGo image proxy server for Render",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

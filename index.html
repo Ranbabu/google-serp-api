@@ -263,9 +263,9 @@
 </div>
 
 <script>
-// ← आपका Render Proxy URL (सही है)
+// Render Proxy URL (Same as yours)
 const PROXY = "https://google-serp-api-bp7z.onrender.com";
-let q = "", offset = 0;
+let q = "";
 
 // DOM Elements
 const qInput = document.getElementById('q');
@@ -326,12 +326,12 @@ tabVideos.onclick = () => {
 // Search Function
 async function doSearch(append = false) {
   const term = qInput.value.trim();
-  if (!term) return alert("कुछ तो लिख Bhai!");
-  if (!append) { q = term; offset = 0; grid.innerHTML = ''; saveHistory(term); }
+  if (!term) return alert("कुछ तो लिख भाई!");
+  if (!append) { q = term; grid.innerHTML = ''; saveHistory(term); }
   loader.style.display = 'block';
 
   try {
-    const res = await fetch(`${PROXY}/api/images?q=${encodeURIComponent(q)}&s=${offset}`);
+    const res = await fetch(`${PROXY}/api/images?q=${encodeURIComponent(q)}`);
     const data = await res.json();
     loader.style.display = 'none';
 
@@ -340,38 +340,40 @@ async function doSearch(append = false) {
         const div = document.createElement('div');
         div.className = 'item';
         div.innerHTML = `
-          <img src="${r.thumbnail || r.image}" loading="lazy">
+          <img src="${r.thumbnail || r.image}" loading="lazy" onerror="this.src='https://via.placeholder.com/150?text=Error'">
           <div class="info">
             <div class="title">${r.title || 'No title'}</div>
-            <div class="source">${r.source || 'DDG'}</div>
+            <div class="source">${r.source || 'DuckDuckGo'}</div>
             <div class="actions">
               <button class="act" onclick="preview('${r.image}')">Preview</button>
-              <a href="${r.image}" download class="act">Download</a>
+              <a href="${r.image}" download class="act" target="_blank">Full Size</a>
               <button class="act" onclick="copyLink('${r.image}')">Copy</button>
             </div>
           </div>`;
         grid.appendChild(div);
       });
-      moreBtn.style.display = data.next ? 'block' : 'none';
+      // DDG Scrape library simple search me pagination difficult hota hai, filhal 'Show More' ko hide karte hain
+      // agar backend me pagination implement hoga tabhi ye enable hoga. 
+      // Abhi ye library ek baar me kaafi result deti hai.
+      moreBtn.style.display = 'none'; 
     } else {
-      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ff6b6b">कोई इमेज नहीं मिली</div>';
+      if(!append) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ff6b6b">कोई इमेज नहीं मिली</div>';
     }
   } catch (e) {
     loader.style.display = 'none';
-    alert('Server सो रहा है या error है। 10 सेकंड बाद फिर ट्राई करें।');
+    console.error(e);
+    alert('Server सो रहा है या error है। 10-20 सेकंड बाद फिर ट्राई करें।');
   }
 }
 
 // Events
 searchBtn.onclick = () => doSearch();
 qInput.addEventListener('keypress', e => { if(e.key==='Enter') doSearch(); });
-moreBtn.onclick = () => { offset += 100; doSearch(true); };
 
 // Preview Modal
 function preview(src) {
   modalBody.innerHTML = `<img class="modalImg" src="${src}" loading="lazy">`;
-  modalMeta.innerHTML = `<a href="${src}" target="_blank" class="act" style="display:inline-block;margin:8px;">Open</a>
-                          <a href="${src}" download class="act" style="display:inline-block;margin:8px;">Download</a>`;
+  modalMeta.innerHTML = `<a href="${src}" target="_blank" class="act" style="display:inline-block;margin:8px;">Open Full</a>`;
   modal.classList.add('show');
 }
 closeModal.onclick = () => modal.classList.remove('show');

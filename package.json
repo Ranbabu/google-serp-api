@@ -1,15 +1,15 @@
 {
   "name": "ddg-proxy-server",
-  "version": "1.0.0",
-  "description": "DuckDuckGo image proxy server for Render",
+  "version": "1.1.0",
+  "description": "DuckDuckGo image proxy server for Render - Updated 2025",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "node-fetch": "^2.6.7"
+    "ddgs": "^5.0.0",  // नई लाइब्रेरी - VQD ऑटो-हैंडल
+    "express": "^4.18.2"
   },
   "engines": {
     "node": "18.x"

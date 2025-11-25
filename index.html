@@ -1,264 +1,260 @@
 <!doctype html>
 <html lang="hi">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>ImageSearchMan — Images & Short Clips</title>
-<meta name="description" content="ImageSearchMan - DuckDuckGo images (via proxy) + quick video preview. Mobile-first app-like UI." />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ImageSearchMan • 2025 Premium</title>
 <style>
-  :root{
-    --bg: linear-gradient(135deg, #f2fbfb, #e0f7fa, #b2ebf2, #fff8e1, #f3e5f5);
-    --card: rgba(255,255,255,0.95);
-    --muted: #6b7280;
-    --accent: #072b2a;
-    --primary: #06b6d4;
-    --secondary: #10b981;
-    --tertiary: #f59e0b;
-    --glass: rgba(255,255,255,0.85);
-    --shadow: 0 4px 20px rgba(6,182,196,0.2);
-    --glow: 0 0 20px rgba(6,182,196,0.4);
+  :root {
+    --pri: #ff006e;
+    --sec: #8338ec;
+    --acc: #06ffa5;
+    --grad: linear-gradient(135deg, #ff006e, #8338ec, #4f46e5);
+    --glass: rgba(255,255,255,0.12);
+    --border: rgba(255,255,255,0.18);
+    --glow: 0 0 30px rgba(131,56,236,0.6);
   }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;padding:0;font-family:Inter,system-ui,Roboto,Arial;color:var(--accent);-webkit-font-smoothing:antialiased}
-  body{background:var(--bg);animation: gradientShift 15s ease infinite, floatParticles 20s linear infinite;}
-  @keyframes gradientShift { 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
-  @keyframes floatParticles { 0%{background-position:0% 0%;} 100%{background-position:100% 100%;} }
-
-  /* Particles - dynamic dots */
-  body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: radial-gradient(2px 2px at 20px 30px, #06b6d4, transparent), radial-gradient(2px 2px at 40px 70px, rgba(16,185,129,0.8), transparent), radial-gradient(1px 1px at 90px 40px, #f59e0b, transparent); background-repeat: repeat; background-size: 100px 100px; opacity: 0.1; pointer-events: none; z-index: -1; animation: drift 30s linear infinite; }
-  @keyframes drift { from { transform: translate(0,0); } to { transform: translate(100px,100px); } }
-
-  /* App frame */
-  .frame{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-  header.appbar{
-    position:fixed;top:0;left:0;right:0;height:72px;padding:12px 14px;display:flex;align-items:center;gap:12px;
-    background:linear-gradient(90deg, rgba(255,255,255,0.95), rgba(224,247,250,0.9));
-    border-bottom:1px solid rgba(7,43,42,0.1);z-index:60;backdrop-filter:blur(15px);box-shadow:var(--shadow)
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: linear-gradient(-45deg, #0f0f23, #1a0033, #000428, #002d5f);
+    background-size: 400% 400%;
+    animation: bg 15s ease infinite;
+    color: white;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
-  .logo{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary),var(--tertiary));display:grid;place-items:center;color:white;font-weight:800;font-size:16px;animation: pulseGlow 2s infinite alternate;}
-  @keyframes pulseGlow { 0%{transform:scale(1);box-shadow:0 0 5px var(--glow);} 100%{transform:scale(1.1);box-shadow:0 0 25px var(--glow);} }
-  .app-title{font-weight:800;font-size:16px;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation: shimmer 3s infinite;}
-  @keyframes shimmer { 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
-  .app-sub{font-size:12px;color:var(--muted)}
-  main.content{flex:1;margin-top:72px;margin-bottom:78px;overflow:auto;padding:18px 14px}
+  @keyframes bg { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
 
-  /* Hero */
-  .hero-wrap{display:flex;justify-content:center}
-  .hero{width:100%;max-width:920px;background:var(--glass);border-radius:20px;padding:16px;border:1px solid rgba(7,43,42,0.1);box-shadow:var(--shadow);backdrop-filter:blur(15px);animation: fadeInUp 0.8s ease;}
-  @keyframes fadeInUp { from{opacity:0;transform:translateY(30px);} to{opacity:1;transform:translateY(0);} }
-  .search-row{display:flex;gap:8px;align-items:center}
-  .search-input{flex:1;padding:14px 16px;border-radius:16px;border:1px solid rgba(7,43,42,0.15);font-size:16px;transition:all 0.3s;background:var(--glass);box-shadow:inset 0 2px 10px rgba(0,0,0,0.05);}
-  .search-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(6,182,196,0.2), inset 0 2px 10px rgba(0,0,0,0.05);transform:scale(1.01);}
-  .btn{padding:12px 16px;border-radius:16px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;}
-  .btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent, rgba(255,255,255,0.2), transparent);transition:0.5s;}
-  .btn:hover::before{left:100%;} .btn:hover{transform:translateY(-2px) scale(1.05);box-shadow:var(--glow);}
-  .btn.solid{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;border:0}
-  .tabs{display:flex;gap:8px;margin-top:12px}
-  .tab{padding:10px 16px;border-radius:20px;border:2px solid rgba(7,43,42,0.15);background:transparent;cursor:pointer;font-weight:700;transition:all 0.3s;}
-  .tab:hover{background:rgba(6,182,196,0.1);transform:translateY(-1px);}
-  .tab.active{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;border-color:var(--primary);box-shadow:var(--glow);transform:scale(1.05);}
+  body::before {
+    content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background: radial-gradient(circle at 20% 30%, #ff006e18 1px, transparent 1px),
+                radial-gradient(circle at 80% 70%, #06ffa518 1px, transparent 1px);
+    background-size: 80px 80px;
+    animation: float 30s linear infinite;
+  }
+  @keyframes float { from {transform:translate(0,0)} to {transform:translate(40px,-40px)} }
 
-  /* History */
-  .history{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
-  .chip{background:linear-gradient(135deg,rgba(6,182,196,0.15),rgba(16,185,129,0.15));border:1px solid rgba(6,182,196,0.25);padding:10px 14px;border-radius:20px;color:var(--primary);font-weight:700;cursor:pointer;transition:all 0.3s;transform-style:preserve-3d;}
-  .chip:hover{transform:rotateY(10deg) scale(1.05);box-shadow:var(--glow);}
+  .wrap { padding:16px; max-width:1100px; margin:auto; position:relative; z-index:2; }
 
-  /* Grid */
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}
-  .card{background:var(--card);border-radius:20px;border:1px solid rgba(7,43,42,0.1);overflow:hidden;display:flex;flex-direction:column;transition:all 0.5s;perspective:1000px;animation:cardSlide 0.6s ease forwards;}
-  .card:hover{transform:rotateY(5deg) translateY(-10px) scale(1.03);box-shadow:0 20px 50px rgba(6,182,196,0.3);}
-  @keyframes cardSlide { from{opacity:0;transform:translateX(50px) rotateY(-10deg);} to{opacity:1;transform:translateX(0) rotateY(0);} }
-  .thumb{width:100%;height:160px;object-fit:cover;display:block;transition:transform 0.5s;}
-  .card:hover .thumb{transform:scale(1.1) rotate(2deg);}
-  .card .meta{padding:14px;font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:10px}
-  .actions{display:flex;gap:8px;flex-wrap:wrap}
-  .smallBtn{padding:8px 12px;border-radius:12px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer;transition:all 0.3s;}
-  .smallBtn:hover{background:var(--primary);color:white;transform:scale(1.1);box-shadow:0 4px 15px rgba(6,182,196,0.3);}
+  header { text-align:center; padding:30px 0 10px; }
+  .logo {
+    width:100px; height:100px; margin:auto auto 16px;
+    background:var(--grad); border-radius:50%; display:grid; place-items:center;
+    font-size:40px; font-weight:900; color:white; box-shadow:var(--glow);
+    animation:pulse 4s infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  h1 { 
+    font-size:34px; margin:16px 0 8px;
+    background:linear-gradient(90deg,#06ffa5,#00d9ff,#8b5cf6);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .tagline { font-size:16px; opacity:0.9; }
 
-  /* Loader */
-  #loader{display:none;text-align:center;padding:30px;}
-  .spinner{display:inline-block;width:50px;height:50px;border:4px solid rgba(6,182,196,0.3);border-top:4px solid var(--primary);border-radius:50%;animation:spin 1s linear infinite;}
-  @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
-  .progress-bar{background:linear-gradient(90deg,var(--primary),var(--secondary));height:4px;border-radius:2px;animation:progress 2s ease-in-out infinite;}
-  @keyframes progress{0%{width:0%;}50%{width:70%;}100%{width:100%;}}
+  /* Main Search Card */
+  .card {
+    background:var(--glass);
+    backdrop-filter:blur(20px);
+    border:1px solid var(--border);
+    border-radius:28px;
+    padding:20px;
+    margin:20px 0 30px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  }
 
-  /* Video area */
-  .video-panel{margin-top:16px}
-  .video-links{display:flex;gap:8px;flex-wrap:wrap}
-  .video-preview{margin-top:12px;animation:fadeIn 0.5s;}
+  /* Search Box - अब बटन नहीं है साइड में */
+  #q {
+    width:100%;
+    padding:18px 20px;
+    border:none;
+    border-radius:50px;
+    background:rgba(255,255,255,0.15);
+    color:white;
+    font-size:17px;
+    min-height:56px;
+    margin-bottom:16px;
+  }
+  #q::placeholder { color:rgba(255,255,255,0.6); }
+  #q:focus { outline:none; background:rgba(255,255,255,0.25); box-shadow:0 0 0 4px rgba(131,56,236,0.3); }
 
-  /* Modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;place-items:center;z-index:120;animation:fadeIn 0.4s;}
-  .modal.show{display:grid}
-  .modalCard{width:95%;max-width:920px;background:var(--card);border-radius:20px;padding:20px;box-shadow:0 30px 60px rgba(0,0,0,0.3);transform:scale(0.8);animation:zoomIn 0.4s forwards;}
-  @keyframes zoomIn{to{transform:scale(1);}}
-  .modalImg{max-width:100%;max-height:70vh;border-radius:16px;display:block;animation:imgZoom 0.5s ease;}
+  /* Tabs */
+  .tabs {
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    margin-bottom:20px;
+  }
+  .tab {
+    padding:12px 36px;
+    border-radius:50px;
+    background:rgba(255,255,255,0.1);
+    border:1px solid rgba(255,255,255,0.2);
+    font-weight:600;
+    min-width:130px;
+    text-align:center;
+    transition:0.3s;
+  }
+  .tab.active {
+    background:var(--grad);
+    box-shadow:var(--glow);
+    transform:scale(1.05);
+  }
 
-  /* Footer */
-  footer.appfoot{position:fixed;left:0;right:0;bottom:0;height:78px;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(224,247,250,0.95));display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid rgba(7,43,42,0.1);z-index:60}
-  .powered{display:flex;gap:8px;align-items:center}
-  .powered .badge{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;padding:10px;border-radius:12px;font-weight:800;animation:pulseGlow 2s infinite alternate;}
+  /* Search Button - अब नीचे सेंटर में */
+  .center-btn {
+    display:block;
+    width:80%;
+    max-width:320px;
+    margin:0 auto;
+    padding:16px 20px;
+    border:none;
+    border-radius:50px;
+    background:var(--grad);
+    color:white;
+    font-size:18px;
+    font-weight:700;
+    box-shadow:var(--glow);
+    cursor:pointer;
+  }
+  .center-btn:active { transform:scale(0.96); }
 
-  /* Responsive */
-  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:420px){.grid{grid-template-columns:1fr}.thumb{height:200px}.hero{padding:12px}}
+  /* Results Grid */
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(150px,1fr));
+    gap:16px;
+    margin-top:20px;
+  }
+  .item {
+    background:var(--glass);
+    border-radius:20px;
+    overflow:hidden;
+    border:1px solid var(--border);
+    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    animation:pop 0.6s forwards;
+    opacity:0;
+  }
+  .item img {
+    width:100%; height:180px; object-fit:cover; transition:0.4s;
+  }
+  .item:hover img { transform:scale(1.12); }
+  .info { padding:12px; font-size:14px; }
+  .title { font-weight:600; margin-bottom:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .actions { display:flex; gap:8px; margin-top:10px; }
+  .act {
+    flex:1; padding:10px; border:none; border-radius:12px;
+    background:rgba(255,255,255,0.15); color:white; font-size:13px; font-weight:600;
+  }
+  .act:active { background:var(--acc); }
+
+  #loader { text-align:center; padding:60px 20px; display:none; }
+  .spin {
+    width:60px; height:60px; border:5px solid rgba(255,255,255,0.2);
+    border-top-color:var(--acc); border-radius:50%;
+    animation:spin 1s linear infinite; margin:auto;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  #moreBtn {
+    display:block; margin:40px auto; padding:16px 50px; font-size:18px;
+    width:80%; max-width:320px;
+  }
+
+  footer { text-align:center; padding:40px 20px; opacity:0.9; font-size:14px; }
+  .badge {
+    background:var(--grad); padding:12px 32px; border-radius:50px;
+    display:inline-block; box-shadow:var(--glow); font-weight:700;
+  }
 </style>
 </head>
 <body>
-<div class="frame">
-  <header class="appbar">
+
+<div class="wrap">
+  <header>
     <div class="logo">IS</div>
-    <div style="flex:1">
-      <div class="app-title">ImageSearchMan</div>
-      <div class="app-sub">Images · Short clips · Quick preview</div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button id="clearHistoryBtn" class="btn" title="Clear history">Clear</button>
-    </div>
+    <h1>ImageSearchMan</h1>
+    <p class="tagline">सबसे तेज़ और सुंदर DDG इमेज सर्च • 2025 एडिशन</p>
   </header>
 
-  <main class="content" role="main">
-    <div class="hero-wrap">
-      <div class="hero" aria-label="Search card">
-        <div class="search-row">
-          <input id="q" class="search-input" placeholder="खोजें — जैसे: 'बिहार वोट चोरी' या 'प्रधानमंत्री योजना' " />
-          <button id="searchBtn" class="btn solid">Search</button>
-        </div>
+  <div class="card">
+    <input type="text" id="q" placeholder="यहाँ सर्च करें... जैसे: बिहार चुनाव, नरेंद्र मोदी, विराट कोहली..." autocomplete="off">
 
-        <div class="tabs" style="justify-content:space-between;align-items:center">
-          <div style="display:flex;gap:8px">
-            <button id="tabImages" class="tab active">Images</button>
-            <button id="tabVideos" class="tab">Videos</button>
-          </div>
-          <div style="font-size:13px;color:var(--muted)">App-like dynamic interface ✨</div>
-        </div>
-
-        <div id="historyWrap" class="history" aria-hidden="false"></div>
-      </div>
+    <div class="tabs">
+      <div class="tab active" id="tabImg">Images</div>
+      <div class="tab" id="tabVid">Videos</div>
     </div>
 
-    <!-- Images area -->
-    <div id="imagesArea" style="margin-top:12px">
-      <div id="loader"><div class="spinner"></div><div style="margin-top:12px;color:var(--muted)">लोड कर रहे हैं…</div><div class="progress-bar" style="margin-top:10px;width:0%;"></div></div>
-      <div id="grid" class="grid" aria-live="polite"></div>
-      <div style="text-align:center;margin-top:16px"><button id="moreBtn" class="btn" style="display:none">और दिखाओ</button></div>
-    </div>
+    <!-- अब बटन नीचे सेंटर में है -->
+    <button class="center-btn" id="searchBtn">Search</button>
+  </div>
 
-    <!-- Videos area -->
-    <div id="videosArea" style="display:none;margin-top:12px">
-      <div class="video-panel">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="videoUrl" placeholder="वीडियो URL डालें (YouTube या mp4) — preview & thumbnail" style="flex:1;padding:12px;border-radius:12px;border:1px solid rgba(7,43,42,0.1);background:var(--glass)" />
-          <button id="previewBtn" class="btn">Preview</button>
-        </div>
+  <div id="loader"><div class="spin"></div><p>लोड हो रहा है...</p></div>
+  <div class="grid" id="grid"></div>
+  <button class="center-btn" id="moreBtn" style="display:none">और दिखाएं</button>
 
-        <div style="margin-top:10px;font-size:13px;color:var(--muted)">Quick opens:</div>
-        <div class="video-links" style="margin-top:8px">
-          <button id="openDuck" class="smallBtn">DuckDuckGo Videos</button>
-          <button id="openYou" class="smallBtn">YouTube</button>
-          <button id="openBing" class="smallBtn">Bing Videos</button>
-        </div>
-
-        <div id="videoPreview" class="video-preview"></div>
-      </div>
-    </div>
-  </main>
-
-  <footer class="appfoot">
-    <div class="powered"><div style="font-weight:700">Powered by</div><div class="badge">DDG Proxy</div></div>
-    <div style="font-size:13px;color:var(--muted)">© ImageSearchMan — Dynamic Render Proxy 2025</div>
+  <footer>
+    <div class="badge">Powered by DDG Proxy + Render</div>
+    <p style="margin-top:12px">© 2025 ImageSearchMan • Premium Mobile Edition</p>
   </footer>
 </div>
 
-<!-- Modal -->
-<div id="modal" class="modal" role="dialog" aria-modal="true">
-  <div class="modalCard">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Preview</div>
-      <div><button id="closeModal" class="btn">Close</button></div>
-    </div>
-    <div id="modalBody" style="margin-top:16px;display:grid;place-items:center;min-height:200px"></div>
-    <div id="modalMeta" style="margin-top:12px;color:var(--muted)"></div>
-  </div>
-</div>
-
 <script>
-/* Updated single-file HTML - Beautiful dynamic UI with animations */
-/* --------- PROXY URL --------- */
-const PROXY_URL = "https://google-serp-api-bp7z.onrender.com"; // आपका URL
-/* ----------------------------- */
+const PROXY = "https://google-serp-api-bp7z.onrender.com";
+let q = "", offset = 0;
 
-// DOM (same)
-const qInput = document.getElementById('q');
-const searchBtn = document.getElementById('searchBtn');
-const tabImages = document.getElementById('tabImages');
-const tabVideos = document.getElementById('tabVideos');
-const grid = document.getElementById('grid');
-const loader = document.getElementById('loader');
-const moreBtn = document.getElementById('moreBtn');
-const historyWrap = document.getElementById('historyWrap');
-const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-const imagesArea = document.getElementById('imagesArea');
-const videosArea = document.getElementById('videosArea');
-const videoUrl = document.getElementById('videoUrl');
-const previewBtn = document.getElementById('previewBtn');
-const openDuck = document.getElementById('openDuck');
-const openYou = document.getElementById('openYou');
-const openBing = document.getElementById('openBing');
-const videoPreview = document.getElementById('videoPreview');
-const modal = document.getElementById('modal');
-const modalBody = document.getElementById('modalBody');
-const modalMeta = document.getElementById('modalMeta');
-const closeModal = document.getElementById('closeModal');
+document.getElementById('searchBtn').onclick = () => search();
+document.getElementById('q').addEventListener('keypress', e => { if(e.key==='Enter') search(); });
 
-let currentQ = "";
-let offset = 0;
+async function search(append = false) {
+  const term = document.getElementById('q').value.trim();
+  if(!term) return alert("कुछ तो लिखो भाई!");
 
-// Auto wake-up
-fetch(PROXY_URL).catch(()=>{});
+  if(!append) { q = term; offset = 0; document.getElementById('grid').innerHTML = ''; }
+  document.getElementById('loader').style.display = 'block';
 
-// History (same)
-function loadHistory(){const arr=JSON.parse(localStorage.getItem('ism_hist')||'[]');if(arr.length===0){historyWrap.innerHTML='';return;}historyWrap.innerHTML=arr.map(q=>`<div class="chip" onclick="startFromHistory('${encodeURIComponent(q)}')">${escapeHtml(q)}</div>`).join('');}
-function saveHistory(q){if(!q)return;let arr=JSON.parse(localStorage.getItem('ism_hist')||'[]');arr=arr.filter(x=>x!==q);arr.unshift(q);if(arr.length>20)arr=arr.slice(0,20);localStorage.setItem('ism_hist',JSON.stringify(arr));loadHistory();}
-function startFromHistory(enc){qInput.value=decodeURIComponent(enc);doSearch();}
-clearHistoryBtn.addEventListener('click',()=>{localStorage.removeItem('ism_hist');loadHistory();});
+  try {
+    const res = await fetch(`${PROXY}/api/images?q=${encodeURIComponent(q)}&s=${offset}`);
+    const data = await res.json();
+    document.getElementById('loader').style.display = 'none';
 
-// Tabs (smooth transition)
-tabImages.addEventListener('click',()=>{tabImages.classList.add('active');tabVideos.classList.remove('active');imagesArea.style.display='block';videosArea.style.display='none';imagesArea.style.opacity='0';setTimeout(()=>imagesArea.style.transition='opacity 0.3s',10);setTimeout(()=>imagesArea.style.opacity='1',20);});
-tabVideos.addEventListener('click',()=>{tabVideos.classList.add('active');tabImages.classList.remove('active');videosArea.style.display='block';imagesArea.style.display='none';videosArea.style.opacity='0';setTimeout(()=>videosArea.style.transition='opacity 0.3s',10);setTimeout(()=>videosArea.style.opacity='1',20);});
+    if(data.results && data.results.length) {
+      data.results.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <img src="${r.thumbnail || r.image}" loading="lazy" alt="">
+          <div class="info">
+            <div class="title">${r.title || 'No title'}</div>
+            <div class="actions">
+              <button class="act" onclick="prev('${r.image}')">Preview</button>
+              <a href="${r.image}" download class="act">Download</a>
+              <button class="act" onclick="copy('${r.image}')">Copy</button>
+            </div>
+          </div>`;
+        document.getElementById('grid').appendChild(div);
+      });
+      document.getElementById('moreBtn').style.display = data.next ? 'block' : 'none';
+    }
+  } catch(e) {
+    document.getElementById('grid').innerHTML += `<div style="grid-column:1/-1;padding:30px;color:#ff6b6b;text-align:center;">Error: ${e.message}</div>`;
+  }
+}
 
-// Escape
-function escapeHtml(s){if(!s)return'';return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);}
+function prev(src) {
+  const img = new Image(); img.src = src;
+  img.style.cssText = 'max-width:95vw;max-height:90vh;border-radius:20px;box-shadow:0 20px 60px #0008';
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:#000c;display:grid;place-items:center;z-index:999';
+  ov.onclick = () => ov.remove();
+  ov.appendChild(img);
+  document.body.appendChild(ov);
+}
 
-// Fetch images
-async function fetchImages(q,s=0){loader.style.display='block';const progress=document.querySelector('.progress-bar');progress.style.width='0%';let prog=0;const interval=setInterval(()=>{prog+=10;if(prog<=100)progress.style.width=prog+'%';},100);try{const url=`${PROXY_URL}/api/images?q=${encodeURIComponent(q)}&s=${s}`;const res=await fetch(url);if(!res.ok)throw new Error(`Status ${res.status}`);const data=await res.json();clearInterval(interval);progress.style.width='100%';setTimeout(()=>loader.style.display='none',500);if(data.error)throw new Error(data.error);return data;}catch(err){clearInterval(interval);loader.style.display='none';console.error('Fetch error',err);grid.innerHTML=`<div style="padding:20px;color:var(--muted);text-align:center;border-radius:12px;background:var(--glass)">❌ एरर: ${err.message}. प्रॉक्सी चेक करें।</div>`;throw err;}}
+function copy(t) { navigator.clipboard.writeText(t).then(() => alert('लिंक कॉपी हो गया!')); }
 
-// Make card (with stagger)
-function makeCard(item,index){const div=document.createElement('div');div.className='card';div.style.animationDelay=`${index*0.1}s`;const img=item.thumbnail||item.image||'';const title=(item.title||'').slice(0,80);const source=item.source||item.url||'';div.innerHTML=`<img class="thumb" src="${escapeHtml(img)}" alt="${escapeHtml(title)}" loading="lazy" /><div class="meta"><div style="font-weight:700">${escapeHtml(title)}</div><div style="font-size:12px;color:var(--muted)">Source: ${escapeHtml(source)}</div><div class="actions"><button class="smallBtn" data-src="${escapeHtml(item.image||img)}" data-title="${escapeHtml(title)}">Preview</button><a class="smallBtn" href="${item.image||img||'#'}" target="_blank" rel="noreferrer" download>Download</a><button class="smallBtn">Copy link</button><a class="smallBtn" href="${item.url||source||'#'}" target="_blank" rel="noreferrer">Open</a></div></div>`;const previewBtn=div.querySelector('button');previewBtn.addEventListener('click',()=>openPreview(previewBtn.getAttribute('data-src'),previewBtn.getAttribute('data-title')));const copyBtn=div.querySelectorAll('button')[1];copyBtn.addEventListener('click',()=>{const link=previewBtn.getAttribute('data-src')||'';if(!link)return alert('Link missing');navigator.clipboard?.writeText(link).then(()=>alert('✅ Link copied!')).catch(()=>prompt('Copy this:',link));});return div;}
-
-// Preview modal
-function openPreview(src,title){if(!src)return alert('No image');modalBody.innerHTML=`<img class="modalImg" src="${src}" alt="${escapeHtml(title)}" />`;modalMeta.innerHTML=`<div style="margin-top:12px;display:flex;gap:8px;justify-content:center"><a class="btn" href="${src}" target="_blank" rel="noreferrer">Open image</a><a class="btn solid" href="${src}" download>Download</a></div>`;modal.classList.add('show');}
-closeModal.addEventListener('click',()=>modal.classList.remove('show'));modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('show');});
-
-// Do search
-async function doSearch(){const q=qInput.value.trim();if(!q)return alert('कृपया खोज शब्द डालें');currentQ=q;offset=0;grid.innerHTML='';saveHistory(q);try{const data=await fetchImages(q,offset);if(!data||!data.results||data.results.length===0){grid.innerHTML=`<div style="padding:20px;color:var(--muted);text-align:center;border-radius:12px;background:var(--glass)">😔 कोई चित्र नहीं मिला। अलग कीवर्ड ट्राई करें।</div>`;moreBtn.style.display='none';return;}data.results.forEach((item,index)=>{const card=makeCard(item,index);grid.appendChild(card);});moreBtn.style.display=data.next?'inline-block':'none';}catch(e){}}
-searchBtn.addEventListener('click',doSearch);qInput.addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
-
-moreBtn.addEventListener('click',async()=>{offset+=100;try{const data=await fetchImages(currentQ,offset);if(data&&data.results){data.results.forEach((item,index)=>{const card=makeCard(item,grid.children.length+index);grid.appendChild(card);});moreBtn.style.display=data.next?'inline-block':'none';}else{moreBtn.style.display='none';}}catch(e){}});
-
-// Video preview (enhanced)
-function extractYouTubeID(url){if(!url)return null;const m=url.match(/(?:v=|\/embed\/|\.be\/|v\/)([A-Za-z0-9_-]{6,})/);return m?m[1]:null;}
-previewBtn.addEventListener('click',()=>{const url=(videoUrl.value||'').trim();if(!url)return alert('कृपया video URL डालें');videoPreview.innerHTML='';const yt=extractYouTubeID(url);if(yt){const thumb=`https://img.youtube.com/vi/${yt}/hqdefault.jpg`;videoPreview.innerHTML=`<div style="background:var(--card);padding:16px;border-radius:16px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);animation:fadeIn 0.5s;"><img src="${thumb}" style="width:160px;height:90px;object-fit:cover;border-radius:12px" /><div style="flex:1"><div style="font-weight:700">YouTube Preview</div><div style="margin-top:10px;display:flex;gap:8px"><button class="smallBtn" onclick="window.open('https://www.youtube.com/watch?v=${yt}','_blank')">Open</button><a class="smallBtn" href="${thumb}" download>Thumbnail DL</a><button class="smallBtn" onclick="embedYou('${yt}')">Embed</button></div></div></div>`;return;}if(url.match(/\.mp4($|\?)/i)){videoPreview.innerHTML=`<div style="background:var(--card);padding:16px;border-radius:16px;box-shadow:var(--shadow);animation:fadeIn 0.5s;"><video controls style="width:100%;max-height:350px;border-radius:12px"><source src="${url}" type="video/mp4">समर्थन नहीं</video><div style="margin-top:12px;text-align:center"><a class="btn solid" href="${url}" download>डाउनलोड वीडियो</a></div></div>`;return;}videoPreview.innerHTML=`<div style="padding:16px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);text-align:center">❌ Preview नहीं। <a href="${url}" target="_blank" class="smallBtn">Open source</a></div>`;});
-
-function embedYou(id){modalBody.innerHTML=`<iframe width="100%" height="450" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="border-radius:12px;"></iframe>`;modalMeta.innerHTML=`<div style="margin-top:12px;text-align:center"><a class="btn" href="https://www.youtube.com/watch?v=${id}" target="_blank">YouTube पर खोलें</a></div>`;modal.classList.add('show');}
-
-// Quick opens
-openDuck.addEventListener('click',()=>{const q=encodeURIComponent(currentQ||qInput.value.trim()||'');if(!q)return alert('पहले खोजें');window.open(`https://duckduckgo.com/?q=${q}&iax=videos&ia=videos`,'_blank');});
-openYou.addEventListener('click',()=>{const q=encodeURIComponent(currentQ||qInput.value.trim()||'');if(!q)return alert('पहले खोजें');window.open(`https://www.youtube.com/results?search_query=${q}`,'_blank');});
-openBing.addEventListener('click',()=>{const q=encodeURIComponent(currentQ||qInput.value.trim()||'');if(!q)return alert('पहले खोजें');window.open(`https://www.bing.com/videos/search?q=${q}`,'_blank');});
-
-// Init
-loadHistory();
+document.getElementById('moreBtn').onclick = () => { offset += 100; search(true); };
+document.getElementById('q').focus();
 </script>
 </body>
 </html>

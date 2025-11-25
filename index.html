@@ -12,66 +12,58 @@
     --muted:#6b7280;
     --accent:#072b2a;
     --primary:#06b6d4;
-    --glass:rgba(255,255,255,0.7);
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;padding:0;font-family:Inter,system-ui,Roboto,Arial;color:var(--accent);-webkit-font-smoothing:antialiased}
+  html,body{height:100%;margin:0;padding:0;font-family:Inter,system-ui,Roboto,Arial;color:var(--accent)}
   body{background:linear-gradient(180deg,#f7fbfc,#eef7f9);}
 
-  /* App frame */
-  .frame{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  .frame{display:flex;flex-direction:column;height:100vh;}
   header.appbar{
-    position:fixed;top:0;left:0;right:0;height:72px;padding:12px 14px;display:flex;align-items:center;gap:12px;
-    background:linear-gradient(90deg, rgba(255,255,255,0.9), rgba(250,255,254,0.7));
-    border-bottom:1px solid rgba(7,43,42,0.03);z-index:60;backdrop-filter:blur(6px)
+    position:fixed;top:0;left:0;right:0;padding:12px 14px;height:72px;
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);
+    border-bottom:1px solid rgba(7,43,42,0.06);
+    display:flex;align-items:center;gap:12px;z-index:20;
   }
-  .logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#0ab0c2);display:grid;place-items:center;color:white;font-weight:800;font-size:16px}
-  .app-title{font-weight:800;font-size:16px}
+  .logo{width:46px;height:46px;background:var(--primary);color:white;border-radius:10px;
+    display:grid;place-items:center;font-weight:800;font-size:17px}
+  .app-title{font-weight:800;font-size:17px}
   .app-sub{font-size:12px;color:var(--muted)}
-  main.content{flex:1;margin-top:72px;margin-bottom:78px;overflow:auto;padding:18px 14px}
 
-  /* Search / hero card center */
-  .hero-wrap{display:flex;justify-content:center}
-  .hero{width:100%;max-width:920px;background:var(--card);border-radius:14px;padding:12px;border:1px solid rgba(7,43,42,0.04);box-shadow:0 10px 30px rgba(7,43,42,0.04)}
-  .search-row{display:flex;gap:8px;align-items:center}
-  .search-input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(7,43,42,0.06);font-size:16px}
-  .btn{padding:10px 12px;border-radius:12px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer;transition:.14s}
-  .btn.solid{background:var(--primary);color:#fff;border:0}
-  .tabs{display:flex;gap:8px;margin-top:10px}
-  .tab{padding:8px 12px;border-radius:999px;border:2px solid rgba(7,43,42,0.06);background:transparent;cursor:pointer;font-weight:700}
-  .tab.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 8px 20px rgba(6,182,196,0.12)}
+  main.content{flex:1;margin-top:72px;margin-bottom:80px;overflow:auto;padding:14px;}
 
-  /* history */
-  .history{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
-  .chip{background:rgba(6,182,196,0.08);border:1px solid rgba(6,182,196,0.14);padding:8px 10px;border-radius:10px;color:var(--primary);font-weight:700;cursor:pointer}
+  /* Search Card */
+  .hero{max-width:900px;margin:auto;background:var(--card);padding:14px;border-radius:14px;
+    border:1px solid rgba(7,43,42,0.06);box-shadow:0 8px 22px rgba(7,43,42,0.06)}
+  .search-row{display:flex;gap:8px;}
+  .search-input{flex:1;padding:12px;border-radius:12px;border:1px solid rgba(7,43,42,0.08);font-size:16px}
+  .btn{padding:10px 14px;border-radius:12px;border:2px solid var(--primary);color:var(--primary);background:white;font-weight:700;cursor:pointer}
+  .btn.solid{background:var(--primary);color:white;border:0;}
+  .tabs{display:flex;gap:10px;margin-top:10px;}
+  .tab{padding:8px 14px;border-radius:999px;border:2px solid rgba(7,43,42,0.06);cursor:pointer;font-weight:700}
+  .tab.active{background:var(--primary);color:white;border-color:var(--primary);}
 
-  /* grid */
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
-  .card{background:var(--card);border-radius:12px;border:1px solid rgba(7,43,42,0.04);overflow:hidden;display:flex;flex-direction:column}
-  .thumb{width:100%;height:140px;object-fit:cover;display:block}
-  .card .meta{padding:10px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:8px}
-  .actions{display:flex;gap:8px;flex-wrap:wrap}
-  .smallBtn{padding:8px 10px;border-radius:10px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer}
+  /* History */
+  .history{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}
+  .chip{padding:8px 12px;border-radius:12px;background:rgba(6,182,196,0.12);color:var(--primary);font-weight:700;cursor:pointer}
 
-  /* video area */
-  .video-panel{margin-top:12px}
-  .video-links{display:flex;gap:8px;flex-wrap:wrap}
-  .video-preview{margin-top:10px}
+  /* Grid */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+  .card{background:white;border-radius:12px;overflow:hidden;border:1px solid rgba(7,43,42,0.06)}
+  .thumb{width:100%;height:180px;object-fit:cover;}
+  .meta{padding:10px;font-size:13px;color:var(--muted)}
+  .actions{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+  .smallBtn{padding:7px 10px;border-radius:10px;border:2px solid var(--primary);color:var(--primary);background:white;font-weight:700;cursor:pointer}
 
-  /* modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;place-items:center;z-index:120}
-  .modal.show{display:grid}
-  .modalCard{width:95%;max-width:920px;background:var(--card);border-radius:12px;padding:12px}
-  .modalImg{max-width:100%;max-height:70vh;border-radius:8px;display:block}
+  @media(max-width:420px){.grid{grid-template-columns:repeat(1,1fr)}}
 
-  /* footer */
-  footer.appfoot{position:fixed;left:0;right:0;bottom:0;height:78px;background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,255,254,0.9));display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid rgba(7,43,42,0.03);z-index:60}
-  .powered{display:flex;gap:8px;align-items:center}
-  .powered .badge{background:var(--primary);color:#fff;padding:8px;border-radius:8px;font-weight:800}
+  /* Footer */
+  footer.appfoot{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);
+    backdrop-filter:blur(8px);padding:12px;border-top:1px solid rgba(7,43,42,0.06);
+    display:flex;align-items:center;justify-content:space-between;z-index:20;height:80px;}
+  .badge{background:var(--primary);color:white;padding:8px 10px;border-radius:10px;font-weight:800}
 
-  /* responsive */
-  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:420px){.grid{grid-template-columns:repeat(1,1fr)}.thumb{height:220px}.hero{padding:10px}}
+  /* Loader */
+  #loader{padding:10px;color:var(--muted);text-align:center}
 </style>
 </head>
 <body>
@@ -82,317 +74,182 @@
       <div class="app-title">ImageSearchMan</div>
       <div class="app-sub">Images · Short clips · Quick preview</div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button id="clearHistoryBtn" class="btn" title="Clear history">Clear</button>
-    </div>
+    <button id="clearHistory" class="btn">Clear</button>
   </header>
 
-  <main class="content" role="main">
-    <div class="hero-wrap">
-      <div class="hero" aria-label="Search card">
-        <div class="search-row">
-          <input id="q" class="search-input" placeholder="खोजें — जैसे: 'बिहार वोट चोरी' या 'प्रधानमंत्री योजना' " />
-          <button id="searchBtn" class="btn solid">Search</button>
-        </div>
+  <main class="content">
+    <div class="hero">
+      <div class="search-row">
+        <input id="q" class="search-input" placeholder="खोजें — जैसे: 'Rahul Gandhi' " />
+        <button id="searchBtn" class="btn solid">Search</button>
+      </div>
 
-        <div class="tabs" style="justify-content:space-between;align-items:center">
-          <div style="display:flex;gap:8px">
-            <button id="tabImages" class="tab active">Images</button>
-            <button id="tabVideos" class="tab">Videos</button>
-          </div>
-          <div style="font-size:13px;color:var(--muted)">App-like interface</div>
-        </div>
+      <div class="tabs">
+        <button id="tabImages" class="tab active">Images</button>
+        <button id="tabVideos" class="tab">Videos</button>
+      </div>
 
-        <div id="historyWrap" class="history" aria-hidden="false"></div>
+      <div id="historyWrap" class="history"></div>
+    </div>
+
+    <!-- Images -->
+    <div id="imagesArea">
+      <div id="loader" style="display:none;">लोड कर रहे हैं…</div>
+      <div id="grid" class="grid"></div>
+      <div style="text-align:center;margin-top:10px">
+        <button id="moreBtn" class="btn" style="display:none">और दिखाओ</button>
       </div>
     </div>
 
-    <!-- Images area -->
-    <div id="imagesArea" style="margin-top:12px">
-      <div id="loader" style="display:none;padding:12px;color:var(--muted)">लोड कर रहे हैं…</div>
-      <div id="grid" class="grid" aria-live="polite"></div>
-      <div style="text-align:center;margin-top:12px"><button id="moreBtn" class="btn" style="display:none">और दिखाओ</button></div>
-    </div>
-
-    <!-- Videos area -->
-    <div id="videosArea" style="display:none;margin-top:12px">
-      <div class="video-panel">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="videoUrl" placeholder="वीडियो URL डालें (YouTube या mp4) — preview & thumbnail" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(7,43,42,0.06)" />
-          <button id="previewBtn" class="btn">Preview</button>
-        </div>
-
-        <div style="margin-top:8px;font-size:13px;color:var(--muted)">Quick opens:</div>
-        <div class="video-links" style="margin-top:6px">
-          <button id="openDuck" class="smallBtn">DuckDuckGo Videos</button>
-          <button id="openYou" class="smallBtn">YouTube</button>
-          <button id="openBing" class="smallBtn">Bing Videos</button>
-        </div>
-
-        <div id="videoPreview" class="video-preview"></div>
-      </div>
+    <!-- Videos -->
+    <div id="videosArea" style="display:none;margin-top:10px">
+      <input id="videoInput" class="search-input" placeholder="YouTube / mp4 video URL" />
+      <button id="previewVideo" class="btn" style="margin-top:10px">Preview</button>
+      <div id="videoPreview" style="margin-top:10px"></div>
     </div>
   </main>
 
   <footer class="appfoot">
-    <div class="powered"><div style="font-weight:700">Powered by</div><div class="badge">DDG Proxy</div></div>
-    <div style="font-size:13px;color:var(--muted)">© ImageSearchMan — your Render proxy</div>
+    <div>Powered by</div>
+    <div class="badge">DDG Proxy</div>
   </footer>
 </div>
 
-<!-- Modal -->
-<div id="modal" class="modal" role="dialog" aria-modal="true">
-  <div class="modalCard">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="font-weight:800">Preview</div>
-      <div><button id="closeModal" class="btn">Close</button></div>
-    </div>
-    <div id="modalBody" style="margin-top:12px;display:grid;place-items:center;min-height:180px"></div>
-    <div id="modalMeta" style="margin-top:10px;color:var(--muted)"></div>
-  </div>
-</div>
-
 <script>
-/*
-  Final mobile-optimized single-file index.html
-  - Uses your Render proxy to fetch DuckDuckGo images
-  - Image preview + download + open source + copy link
-  - Video quick links + YouTube & mp4 preview
-  - Fixed header & footer, app-like UI
-  - History (localStorage), auto-wakeup for Render
-*/
+/* ------------------- CORRECT PROXY URL ------------------- */
+const PROXY_URL = "https://google-serp-api-bp7z.onrender.com";
+/* --------------------------------------------------------- */
 
-/* --------- SET YOUR PROXY URL HERE (only edit this if different) --------- */
-const PROXY_URL = "https://google-serp-api-bp7z.onrender.com"; // <-- change if your render url different
-/* ------------------------------------------------------------------------ */
+let qInput = document.getElementById("q");
+let grid = document.getElementById("grid");
+let loader = document.getElementById("loader");
+let moreBtn = document.getElementById("moreBtn");
 
-// DOM
-const qInput = document.getElementById('q');
-const searchBtn = document.getElementById('searchBtn');
-const tabImages = document.getElementById('tabImages');
-const tabVideos = document.getElementById('tabVideos');
-const grid = document.getElementById('grid');
-const loader = document.getElementById('loader');
-const moreBtn = document.getElementById('moreBtn');
-const historyWrap = document.getElementById('historyWrap');
-const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-
-const imagesArea = document.getElementById('imagesArea');
-const videosArea = document.getElementById('videosArea');
-
-const videoUrl = document.getElementById('videoUrl');
-const previewBtn = document.getElementById('previewBtn');
-const openDuck = document.getElementById('openDuck');
-const openYou = document.getElementById('openYou');
-const openBing = document.getElementById('openBing');
-const videoPreview = document.getElementById('videoPreview');
-
-const modal = document.getElementById('modal');
-const modalBody = document.getElementById('modalBody');
-const modalMeta = document.getElementById('modalMeta');
-const closeModal = document.getElementById('closeModal');
-
-let currentQ = "";
 let offset = 0;
+let currentQ = "";
 
-/* Auto wake-up Render (best-effort) */
-fetch(PROXY_URL).catch(()=>{});
+/* ---------------- Tabs ---------------- */
+document.getElementById("tabImages").onclick = () => {
+  imagesArea.style.display = "block";
+  videosArea.style.display = "none";
+  tabImages.classList.add("active");
+  tabVideos.classList.remove("active");
+};
 
-/* -------- History -------- */
-function loadHistory(){
-  const arr = JSON.parse(localStorage.getItem('ism_hist')||'[]');
-  if(arr.length===0){ historyWrap.innerHTML=''; return; }
-  historyWrap.innerHTML = arr.map(q=>`<div class="chip" onclick="startFromHistory('${encodeURIComponent(q)}')">${escapeHtml(q)}</div>`).join('');
-}
-function saveHistory(q){
-  if(!q) return;
-  let arr = JSON.parse(localStorage.getItem('ism_hist')||'[]');
-  arr = arr.filter(x=>x!==q);
-  arr.unshift(q);
-  if(arr.length>20) arr=arr.slice(0,20);
-  localStorage.setItem('ism_hist', JSON.stringify(arr));
-  loadHistory();
-}
-function startFromHistory(enc){
-  qInput.value = decodeURIComponent(enc); doSearch();
-}
-clearHistoryBtn.addEventListener('click', ()=>{
-  localStorage.removeItem('ism_hist'); loadHistory();
-});
+document.getElementById("tabVideos").onclick = () => {
+  videosArea.style.display = "block";
+  imagesArea.style.display = "none";
+  tabVideos.classList.add("active");
+  tabImages.classList.remove("active");
+};
 
-/* -------- UI Tab handlers -------- */
-tabImages.addEventListener('click', ()=>{
-  tabImages.classList.add('active'); tabVideos.classList.remove('active');
-  imagesArea.style.display='block'; videosArea.style.display='none';
-});
-tabVideos.addEventListener('click', ()=>{
-  tabVideos.classList.add('active'); tabImages.classList.remove('active');
-  imagesArea.style.display='none'; videosArea.style.display='block';
-});
-
-/* -------- Helper escape -------- */
-function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
-
-/* -------- Fetch images via proxy -------- */
-async function fetchImages(q, s=0){
-  loader.style.display = 'block';
-  try{
+/* ---------------- Search ---------------- */
+async function fetchImages(q, s = 0) {
+  loader.style.display = "block";
+  try {
     const url = `${PROXY_URL}/api/images?q=${encodeURIComponent(q)}&s=${s}`;
     const res = await fetch(url);
-    if(!res.ok) throw new Error('Status '+res.status);
     const data = await res.json();
-    loader.style.display = 'none';
+    loader.style.display = "none";
     return data;
-  }catch(err){
-    loader.style.display = 'none';
-    console.error('Fetch error', err);
-    alert('Server error: Failed to fetch images (server may be waking up). थोड़ी देर बाद पुनः प्रयास करें।');
+  } catch (err) {
+    loader.style.display = "none";
+    alert("Server error (maybe waking up). फिर try करें।");
     throw err;
   }
 }
 
-/* -------- Make image card -------- */
-function makeCard(item){
-  const div = document.createElement('div');
-  div.className = 'card';
-  const img = item.thumbnail || item.image || '';
-  const title = (item.title||'').slice(0,80);
-  const source = item.source || item.url || '';
+function makeCard(item) {
+  const div = document.createElement("div");
+  div.className = "card";
+
+  const img = item.image || item.thumbnail || "";
+
   div.innerHTML = `
-    <img class="thumb" src="${escapeHtml(img)}" alt="${escapeHtml(title)}" loading="lazy" />
+    <img class="thumb" src="${img}" />
     <div class="meta">
-      <div style="font-weight:700">${escapeHtml(title)}</div>
-      <div style="font-size:12px;color:var(--muted)">Source: ${escapeHtml(source)}</div>
+      <div>${item.title || ""}</div>
       <div class="actions">
-        <button class="smallBtn" data-src="${escapeHtml(item.image||img)}" data-title="${escapeHtml(title)}">Preview</button>
-        <a class="smallBtn" href="${item.image||img||'#'}" target="_blank" rel="noreferrer" download>Download</a>
-        <button class="smallBtn">Copy link</button>
-        <a class="smallBtn" href="${item.url||source||'#'}" target="_blank" rel="noreferrer">Open</a>
+        <a class="smallBtn" href="${img}" download>Download</a>
+        <a class="smallBtn" href="${item.url}" target="_blank">Open</a>
       </div>
     </div>
   `;
-  // events
-  const previewBtn = div.querySelector('button');
-  previewBtn.addEventListener('click', ()=> openPreview(previewBtn.getAttribute('data-src'), previewBtn.getAttribute('data-title')));
-
-  const copyBtn = div.querySelectorAll('button')[1];
-  copyBtn.addEventListener('click', ()=> {
-    const link = previewBtn.getAttribute('data-src') || '';
-    if(!link) return alert('Link missing');
-    navigator.clipboard?.writeText(link).then(()=> alert('Link copied')).catch(()=> prompt('Copy this link:', link));
-  });
-
   return div;
 }
 
-/* -------- Open preview modal -------- */
-function openPreview(src, title){
-  if(!src) return alert('No image source');
-  modalBody.innerHTML = `<img class="modalImg" src="${src}" alt="${escapeHtml(title)}" />`;
-  modalMeta.innerHTML = `<div style="margin-top:8px"><a class="btn" href="${src}" target="_blank" rel="noreferrer">Open image</a> <a class="btn solid" href="${src}" download style="margin-left:8px">Download</a></div>`;
-  modal.classList.add('show');
-}
-closeModal.addEventListener('click', ()=> modal.classList.remove('show'));
-modal.addEventListener('click', e=>{ if(e.target===modal) modal.classList.remove('show'); });
-
-/* -------- Do search -------- */
-async function doSearch(){
+async function doSearch() {
   const q = qInput.value.trim();
-  if(!q) return alert('कृपया खोज शब्द डालें');
-  currentQ = q; offset = 0; grid.innerHTML = '';
+  if (!q) return;
+
+  currentQ = q;
+  offset = 0;
+  grid.innerHTML = "";
   saveHistory(q);
-  try{
-    const data = await fetchImages(q, offset);
-    if(!data || !data.results || data.results.length===0){
-      grid.innerHTML = `<div style="padding:12px;color:var(--muted)">कोई चित्र नहीं मिला</div>`;
-      moreBtn.style.display='none';
-      return;
-    }
-    data.results.forEach(item => grid.appendChild(makeCard(item)));
-    moreBtn.style.display = (data.next || data.results.length >= 100) ? 'inline-block' : 'none';
-  }catch(e){}
-}
-searchBtn.addEventListener('click', doSearch);
-qInput.addEventListener('keydown', e=> { if(e.key==='Enter') doSearch(); });
 
-moreBtn.addEventListener('click', async ()=>{
+  const data = await fetchImages(q, offset);
+
+  if (!data || !data.results || data.results.length === 0) {
+    grid.innerHTML = `<div style="padding:10px;color:gray">कोई चित्र नहीं मिला</div>`;
+    moreBtn.style.display = "none";
+    return;
+  }
+
+  data.results.forEach(r => grid.appendChild(makeCard(r)));
+  moreBtn.style.display = data.results.length >= 100 ? "block" : "none";
+}
+
+document.getElementById("searchBtn").onclick = doSearch;
+qInput.onkeydown = (e) => { if (e.key === "Enter") doSearch(); };
+
+moreBtn.onclick = async () => {
   offset += 100;
-  try{
-    const data = await fetchImages(currentQ, offset);
-    if(data && data.results){
-      data.results.forEach(item => grid.appendChild(makeCard(item)));
-      moreBtn.style.display = (data.next || data.results.length >= 100) ? 'inline-block' : 'none';
-    } else {
-      moreBtn.style.display = 'none';
-    }
-  }catch(e){}
-});
+  const data = await fetchImages(currentQ, offset);
+  data.results.forEach(r => grid.appendChild(makeCard(r)));
+};
 
-/* -------- Video preview helpers -------- */
-function extractYouTubeID(url){
-  if(!url) return null;
-  const m = url.match(/(?:v=|\/embed\/|\.be\/|v\/)([A-Za-z0-9_-]{6,})/);
-  return m? m[1] : null;
+/* ---------------- History ---------------- */
+function saveHistory(q){
+  let arr = JSON.parse(localStorage.getItem("ism_hist")||"[]");
+  arr = arr.filter(x=>x!==q);
+  arr.unshift(q);
+  if(arr.length>20) arr=arr.slice(0,20);
+  localStorage.setItem("ism_hist",JSON.stringify(arr));
+  renderHistory();
 }
-previewBtn.addEventListener('click', ()=>{
-  const url = (videoUrl.value||'').trim();
-  if(!url) return alert('कृपया video URL डालें');
-  videoPreview.innerHTML = '';
-  const yt = extractYouTubeID(url);
-  if(yt){
-    const thumb = `https://img.youtube.com/vi/${yt}/hqdefault.jpg`;
-    videoPreview.innerHTML = `
-      <div style="background:var(--card);padding:10px;border-radius:10px;display:flex;gap:10px;align-items:center">
-        <img src="${thumb}" style="width:140px;height:78px;object-fit:cover;border-radius:8px" />
-        <div style="flex:1">
-          <div style="font-weight:700">YouTube Preview</div>
-          <div style="margin-top:8px;display:flex;gap:8px">
-            <button class="smallBtn" onclick="window.open('https://www.youtube.com/watch?v=${yt}','_blank')">Open</button>
-            <a class="smallBtn" href="${thumb}" download>Download thumbnail</a>
-            <button class="smallBtn" onclick="embedYou('${yt}')">Embed</button>
-          </div>
-        </div>
-      </div>
-    `;
-    return;
-  }
-  if(url.match(/\.mp4($|\?)/i)){
-    videoPreview.innerHTML = `
-      <div style="background:var(--card);padding:10px;border-radius:10px">
-        <video controls style="width:100%;max-height:320px"><source src="${url}" type="video/mp4">आपका ब्राउज़र समर्थन नहीं करता</video>
-        <div style="margin-top:8px"><a class="btn solid" href="${url}" download>डाउनलोड वीडियो</a></div>
-      </div>
-    `;
-    return;
-  }
-  videoPreview.innerHTML = `<div style="padding:10px;background:var(--card);border-radius:10px">Cannot preview. <a href="${url}" target="_blank">Open source</a></div>`;
-});
-
-function embedYou(id){
-  modalBody.innerHTML = `<iframe width="100%" height="400" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe>`;
-  modalMeta.innerHTML = `<div style="margin-top:8px"><a class="btn" href="https://www.youtube.com/watch?v=${id}" target="_blank">Open on YouTube</a></div>`;
-  modal.classList.add('show');
+function renderHistory(){
+  let arr = JSON.parse(localStorage.getItem("ism_hist")||"[]");
+  historyWrap.innerHTML = arr.map(h=>`<div class="chip" onclick="pickHistory('${h}')">${h}</div>`).join("");
 }
+function pickHistory(q){
+  qInput.value = q;
+  doSearch();
+}
+document.getElementById("clearHistory").onclick = ()=>{
+  localStorage.removeItem("ism_hist");
+  renderHistory();
+};
+renderHistory();
 
-/* quick open */
-openDuck.addEventListener('click', ()=>{
-  const q = encodeURIComponent(currentQ || qInput.value.trim() || '');
-  if(!q) return alert('पहले खोजें');
-  window.open(`https://duckduckgo.com/?q=${q}&iax=videos&ia=videos`, '_blank');
-});
-openYou.addEventListener('click', ()=>{
-  const q = encodeURIComponent(currentQ || qInput.value.trim() || '');
-  if(!q) return alert('पहले खोजें');
-  window.open(`https://www.youtube.com/results?search_query=${q}`, '_blank');
-});
-openBing.addEventListener('click', ()=>{
-  const q = encodeURIComponent(currentQ || qInput.value.trim() || '');
-  if(!q) return alert('पहले खोजें');
-  window.open(`https://www.bing.com/videos/search?q=${q}`, '_blank');
-});
+/* ---------------- Video Preview ---------------- */
+document.getElementById("previewVideo").onclick = ()=>{
+  const url = videoInput.value.trim();
+  if (!url) return;
 
-/* init */
-loadHistory();
+  if(url.includes("youtube.com") || url.includes("youtu.be")){
+    const id = url.split("v=")[1]?.split("&")[0];
+    videoPreview.innerHTML = `
+      <iframe width="100%" height="260" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe>
+    `;
+  }
+  else if(url.endsWith(".mp4")){
+    videoPreview.innerHTML = `
+      <video controls style="width:100%"><source src="${url}" type="video/mp4"></video>
+    `;
+  } else {
+    videoPreview.innerHTML = `<div>Cannot preview. <a href="${url}" target="_blank">Open</a></div>`;
+  }
+};
 </script>
 </body>
 </html>

@@ -1,18 +1,18 @@
 {
   "name": "ddg-proxy-server",
-  "version": "1.1.2",
-  "description": "DuckDuckGo image proxy server for ImageSearchMan - 2025 Edition (No VQD needed)",
+  "version": "2.0.0",
+  "description": "DuckDuckGo image proxy server for ImageSearchMan - 2025 Fixed Edition",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "ddgs": "^9.6.1",
+    "duck-duck-scrape": "^2.2.5",
     "express": "^4.21.1"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=18.0.0"
   },
   "author": "ImageSearchMan Team",
   "license": "MIT"

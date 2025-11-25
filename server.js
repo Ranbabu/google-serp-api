@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { DDGS } = require("ddgs");  // ddgs लाइब्रेरी
+const { DDGS } = require("ddgs");  // ddgs library for auto VQD handling
 
 const app = express();
 app.use(cors());
@@ -18,9 +18,9 @@ app.get("/api/images", async (req, res) => {
       return res.status(400).json({ error: "Missing query" });
     }
 
-    const ddgs = new DDGS({ lang: "hi" });  // हिंदी सपोर्ट
-    const page = Math.floor(s / 50) + 1;  // ddgs में page-based pagination (50 per page)
-    const maxResults = s > 0 ? 50 : 100;  // पहला पेज 100, बाकी 50
+    const ddgs = new DDGS({ lang: "hi" });  // Hindi support
+    const page = Math.floor(s / 50) + 1;  // ddgs pagination (50 per page)
+    const maxResults = s > 0 ? 50 : 100;  // First page 100, others 50
 
     const results = await ddgs.images({
       keywords: q,
@@ -28,7 +28,7 @@ app.get("/api/images", async (req, res) => {
       page: page
     });
 
-    // फ्रंटएंड फॉर्मेट मैच: title, image, thumbnail, url, source
+    // Format for frontend: title, image, thumbnail, url, source
     const formattedResults = results.map(r => ({
       title: r.title || "",
       image: r.image || "",
@@ -37,7 +37,7 @@ app.get("/api/images", async (req, res) => {
       source: r.source || ""
     }));
 
-    const hasNext = results.length === maxResults;  // अगर फुल, तो नेक्स्ट पेज है
+    const hasNext = results.length === maxResults;  // If full, next page available
 
     res.json({
       results: formattedResults,
@@ -51,7 +51,7 @@ app.get("/api/images", async (req, res) => {
 
 // Health check
 app.get("/", (req, res) => {
-  res.send("DDG Proxy Working ✔ (Updated with ddgs - 2025)");
+  res.send("DDG Proxy Working ✔ (Updated with ddgs - No VQD needed, 2025 ready)");
 });
 
 app.listen(PORT, () => {

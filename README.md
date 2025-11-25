@@ -1,1 +1,1 @@
-# google-serp-api
+# DuckDuckGo

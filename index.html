@@ -2,170 +2,397 @@
 <html lang="hi">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ImageSearchMan — DDG Proxy</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>ImageSearchMan — Images & Short Clips</title>
+<meta name="description" content="ImageSearchMan - DuckDuckGo images (via proxy) + quick video preview. Mobile-first app-like UI." />
 <style>
-  /* (Same modern mobile-friendly UI as पहले) */
-  :root{--bg:#f8fafc;--card:#fff;--muted:#6b7280;--accent:#0f172a;--outline:#0ea5a4}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--accent);-webkit-font-smoothing:antialiased}
-  .app{max-width:980px;margin:0 auto;padding:18px}
-  header{display:flex;gap:12px;align-items:center}
-  h1{margin:0;font-size:28px}
-  .search{margin-top:12px;display:flex;gap:8px}
-  .search input{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.06);font-size:16px}
-  .btn{padding:10px 14px;border-radius:10px;border:2px solid var(--outline);background:transparent;color:var(--outline);font-weight:700;cursor:pointer}
-  .btn.solid{background:var(--outline);color:#fff;border:0}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
-  .thumb{background:var(--card);border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid rgba(15,23,42,0.04)}
-  .thumb img{width:100%;height:160px;object-fit:cover;display:block}
-  @media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:420px){.grid{grid-template-columns:repeat(1,1fr)}}
-  .meta{padding:8px;font-size:13px;color:var(--muted)}
-  .footer{margin-top:16px;color:var(--muted);font-size:13px}
-  .small{font-size:13px;padding:6px 8px}
-  .loader{padding:18px;text-align:center;color:var(--muted)}
+  :root{
+    --bg:#f2fbfb;
+    --card:#ffffff;
+    --muted:#6b7280;
+    --accent:#072b2a;
+    --primary:#06b6d4;
+    --glass:rgba(255,255,255,0.7);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;padding:0;font-family:Inter,system-ui,Roboto,Arial;color:var(--accent);-webkit-font-smoothing:antialiased}
+  body{background:linear-gradient(180deg,#f7fbfc,#eef7f9);}
+
+  /* App frame */
+  .frame{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  header.appbar{
+    position:fixed;top:0;left:0;right:0;height:72px;padding:12px 14px;display:flex;align-items:center;gap:12px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.9), rgba(250,255,254,0.7));
+    border-bottom:1px solid rgba(7,43,42,0.03);z-index:60;backdrop-filter:blur(6px)
+  }
+  .logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#0ab0c2);display:grid;place-items:center;color:white;font-weight:800;font-size:16px}
+  .app-title{font-weight:800;font-size:16px}
+  .app-sub{font-size:12px;color:var(--muted)}
+  main.content{flex:1;margin-top:72px;margin-bottom:78px;overflow:auto;padding:18px 14px}
+
+  /* Search / hero card center */
+  .hero-wrap{display:flex;justify-content:center}
+  .hero{width:100%;max-width:920px;background:var(--card);border-radius:14px;padding:12px;border:1px solid rgba(7,43,42,0.04);box-shadow:0 10px 30px rgba(7,43,42,0.04)}
+  .search-row{display:flex;gap:8px;align-items:center}
+  .search-input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(7,43,42,0.06);font-size:16px}
+  .btn{padding:10px 12px;border-radius:12px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer;transition:.14s}
+  .btn.solid{background:var(--primary);color:#fff;border:0}
+  .tabs{display:flex;gap:8px;margin-top:10px}
+  .tab{padding:8px 12px;border-radius:999px;border:2px solid rgba(7,43,42,0.06);background:transparent;cursor:pointer;font-weight:700}
+  .tab.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 8px 20px rgba(6,182,196,0.12)}
+
+  /* history */
+  .history{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:rgba(6,182,196,0.08);border:1px solid rgba(6,182,196,0.14);padding:8px 10px;border-radius:10px;color:var(--primary);font-weight:700;cursor:pointer}
+
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .card{background:var(--card);border-radius:12px;border:1px solid rgba(7,43,42,0.04);overflow:hidden;display:flex;flex-direction:column}
+  .thumb{width:100%;height:140px;object-fit:cover;display:block}
+  .card .meta{padding:10px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .smallBtn{padding:8px 10px;border-radius:10px;border:2px solid var(--primary);background:transparent;color:var(--primary);font-weight:700;cursor:pointer}
+
+  /* video area */
+  .video-panel{margin-top:12px}
+  .video-links{display:flex;gap:8px;flex-wrap:wrap}
+  .video-preview{margin-top:10px}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;place-items:center;z-index:120}
+  .modal.show{display:grid}
+  .modalCard{width:95%;max-width:920px;background:var(--card);border-radius:12px;padding:12px}
+  .modalImg{max-width:100%;max-height:70vh;border-radius:8px;display:block}
+
+  /* footer */
+  footer.appfoot{position:fixed;left:0;right:0;bottom:0;height:78px;background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,255,254,0.9));display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid rgba(7,43,42,0.03);z-index:60}
+  .powered{display:flex;gap:8px;align-items:center}
+  .powered .badge{background:var(--primary);color:#fff;padding:8px;border-radius:8px;font-weight:800}
+
+  /* responsive */
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:420px){.grid{grid-template-columns:repeat(1,1fr)}.thumb{height:220px}.hero{padding:10px}}
 </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h1>ImageSearchMan (DDG Proxy)</h1>
-    </header>
+<div class="frame">
+  <header class="appbar">
+    <div class="logo">IS</div>
+    <div style="flex:1">
+      <div class="app-title">ImageSearchMan</div>
+      <div class="app-sub">Images · Short clips · Quick preview</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="clearHistoryBtn" class="btn" title="Clear history">Clear</button>
+    </div>
+  </header>
 
-    <div class="search">
-      <input id="q" placeholder="खोजें — जैसे: 'प्रधानमंत्री योजना' " />
-      <button id="search" class="btn">Search</button>
-      <button id="videos" class="btn small">Open Videos</button>
+  <main class="content" role="main">
+    <div class="hero-wrap">
+      <div class="hero" aria-label="Search card">
+        <div class="search-row">
+          <input id="q" class="search-input" placeholder="खोजें — जैसे: 'बिहार वोट चोरी' या 'प्रधानमंत्री योजना' " />
+          <button id="searchBtn" class="btn solid">Search</button>
+        </div>
+
+        <div class="tabs" style="justify-content:space-between;align-items:center">
+          <div style="display:flex;gap:8px">
+            <button id="tabImages" class="tab active">Images</button>
+            <button id="tabVideos" class="tab">Videos</button>
+          </div>
+          <div style="font-size:13px;color:var(--muted)">App-like interface</div>
+        </div>
+
+        <div id="historyWrap" class="history" aria-hidden="false"></div>
+      </div>
     </div>
 
-    <div id="history" style="margin-top:10px"></div>
-
-    <div id="loader" class="loader" style="display:none">लोड कर रहे हैं…</div>
-    <div id="grid" class="grid"></div>
-
-    <div style="display:flex;justify-content:center;margin-top:12px">
-      <button id="more" class="btn" style="display:none">और दिखाओ</button>
+    <!-- Images area -->
+    <div id="imagesArea" style="margin-top:12px">
+      <div id="loader" style="display:none;padding:12px;color:var(--muted)">लोड कर रहे हैं…</div>
+      <div id="grid" class="grid" aria-live="polite"></div>
+      <div style="text-align:center;margin-top:12px"><button id="moreBtn" class="btn" style="display:none">और दिखाओ</button></div>
     </div>
 
-    <div class="footer">
-      नोट: यह proxy DuckDuckGo से images लाने के लिए server-side token use करता है — इसे अपनाने पर CORS error नहीं आएगा।<br/>
-      Replace <code>PROXY_URL</code> in script with your render URL.
+    <!-- Videos area -->
+    <div id="videosArea" style="display:none;margin-top:12px">
+      <div class="video-panel">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="videoUrl" placeholder="वीडियो URL डालें (YouTube या mp4) — preview & thumbnail" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(7,43,42,0.06)" />
+          <button id="previewBtn" class="btn">Preview</button>
+        </div>
+
+        <div style="margin-top:8px;font-size:13px;color:var(--muted)">Quick opens:</div>
+        <div class="video-links" style="margin-top:6px">
+          <button id="openDuck" class="smallBtn">DuckDuckGo Videos</button>
+          <button id="openYou" class="smallBtn">YouTube</button>
+          <button id="openBing" class="smallBtn">Bing Videos</button>
+        </div>
+
+        <div id="videoPreview" class="video-preview"></div>
+      </div>
     </div>
+  </main>
+
+  <footer class="appfoot">
+    <div class="powered"><div style="font-weight:700">Powered by</div><div class="badge">DDG Proxy</div></div>
+    <div style="font-size:13px;color:var(--muted)">© ImageSearchMan — your Render proxy</div>
+  </footer>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="modalCard">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:800">Preview</div>
+      <div><button id="closeModal" class="btn">Close</button></div>
+    </div>
+    <div id="modalBody" style="margin-top:12px;display:grid;place-items:center;min-height:180px"></div>
+    <div id="modalMeta" style="margin-top:10px;color:var(--muted)"></div>
   </div>
+</div>
 
 <script>
 /*
-  Replace PROXY_URL with your Render public URL, e.g.:
-  const PROXY_URL = 'https://ddg-proxy-server.onrender.com'
+  Final mobile-optimized single-file index.html
+  - Uses your Render proxy to fetch DuckDuckGo images
+  - Image preview + download + open source + copy link
+  - Video quick links + YouTube & mp4 preview
+  - Fixed header & footer, app-like UI
+  - History (localStorage), auto-wakeup for Render
 */
-const PROXY_URL = 'https://google-serp-api-bp7z.onrender.com/api/images'; // <-- CHANGE THIS
 
+/* --------- SET YOUR PROXY URL HERE (only edit this if different) --------- */
+const PROXY_URL = "https://google-serp-api-bp7z.onrender.com"; // <-- change if your render url different
+/* ------------------------------------------------------------------------ */
+
+// DOM
 const qInput = document.getElementById('q');
-const searchBtn = document.getElementById('search');
-const videosBtn = document.getElementById('videos');
+const searchBtn = document.getElementById('searchBtn');
+const tabImages = document.getElementById('tabImages');
+const tabVideos = document.getElementById('tabVideos');
 const grid = document.getElementById('grid');
 const loader = document.getElementById('loader');
-const moreBtn = document.getElementById('more');
-const historyWrap = document.getElementById('history');
+const moreBtn = document.getElementById('moreBtn');
+const historyWrap = document.getElementById('historyWrap');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
-let currentQ = '';
+const imagesArea = document.getElementById('imagesArea');
+const videosArea = document.getElementById('videosArea');
+
+const videoUrl = document.getElementById('videoUrl');
+const previewBtn = document.getElementById('previewBtn');
+const openDuck = document.getElementById('openDuck');
+const openYou = document.getElementById('openYou');
+const openBing = document.getElementById('openBing');
+const videoPreview = document.getElementById('videoPreview');
+
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modalBody');
+const modalMeta = document.getElementById('modalMeta');
+const closeModal = document.getElementById('closeModal');
+
+let currentQ = "";
 let offset = 0;
-let moreAvailable = false;
 
+/* Auto wake-up Render (best-effort) */
+fetch(PROXY_URL).catch(()=>{});
+
+/* -------- History -------- */
+function loadHistory(){
+  const arr = JSON.parse(localStorage.getItem('ism_hist')||'[]');
+  if(arr.length===0){ historyWrap.innerHTML=''; return; }
+  historyWrap.innerHTML = arr.map(q=>`<div class="chip" onclick="startFromHistory('${encodeURIComponent(q)}')">${escapeHtml(q)}</div>`).join('');
+}
 function saveHistory(q){
   if(!q) return;
-  let arr = JSON.parse(localStorage.getItem('ddg_hist')||'[]');
+  let arr = JSON.parse(localStorage.getItem('ism_hist')||'[]');
   arr = arr.filter(x=>x!==q);
   arr.unshift(q);
-  if(arr.length>15) arr=arr.slice(0,15);
-  localStorage.setItem('ddg_hist', JSON.stringify(arr));
-  renderHistory();
+  if(arr.length>20) arr=arr.slice(0,20);
+  localStorage.setItem('ism_hist', JSON.stringify(arr));
+  loadHistory();
 }
-function renderHistory(){
-  const arr = JSON.parse(localStorage.getItem('ddg_hist')||'[]');
-  if(arr.length===0){ historyWrap.innerHTML=''; return; }
-  historyWrap.innerHTML = '<div style="color:#6b7280;margin-top:8px">History: ' + arr.map(x=>`<button class="btn small" onclick="useHist('${encodeURIComponent(x)}')">${x}</button>`).join(' ') + '</div>';
+function startFromHistory(enc){
+  qInput.value = decodeURIComponent(enc); doSearch();
 }
-function useHist(enc){ qInput.value = decodeURIComponent(enc); doSearch(); }
+clearHistoryBtn.addEventListener('click', ()=>{
+  localStorage.removeItem('ism_hist'); loadHistory();
+});
 
+/* -------- UI Tab handlers -------- */
+tabImages.addEventListener('click', ()=>{
+  tabImages.classList.add('active'); tabVideos.classList.remove('active');
+  imagesArea.style.display='block'; videosArea.style.display='none';
+});
+tabVideos.addEventListener('click', ()=>{
+  tabVideos.classList.add('active'); tabImages.classList.remove('active');
+  imagesArea.style.display='none'; videosArea.style.display='block';
+});
+
+/* -------- Helper escape -------- */
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+
+/* -------- Fetch images via proxy -------- */
 async function fetchImages(q, s=0){
-  const url = `${PROXY_URL}/api/images?q=${encodeURIComponent(q)}&s=${s}`;
-  loader.style.display='block';
-  moreBtn.style.display='none';
+  loader.style.display = 'block';
   try{
+    const url = `${PROXY_URL}/api/images?q=${encodeURIComponent(q)}&s=${s}`;
     const res = await fetch(url);
-    if(!res.ok) throw new Error('Network response not ok: '+res.status);
+    if(!res.ok) throw new Error('Status '+res.status);
     const data = await res.json();
-    loader.style.display='none';
+    loader.style.display = 'none';
     return data;
   }catch(err){
-    loader.style.display='none';
-    console.error(err);
-    alert('Server error: ' + (err.message||'Failed to fetch'));
+    loader.style.display = 'none';
+    console.error('Fetch error', err);
+    alert('Server error: Failed to fetch images (server may be waking up). थोड़ी देर बाद पुनः प्रयास करें।');
     throw err;
   }
 }
 
-function addThumb(item){
-  const d = document.createElement('div');
-  d.className='thumb';
-  const imgUrl = item.image || item.thumbnail || item.src || '';
-  d.innerHTML = `<img src="${imgUrl}" loading="lazy" alt="${(item.title||'image')}" />
-    <div class="meta">${(item.title||'').slice(0,80)}<div style="margin-top:6px;font-size:12px;color:#9ca3af">Source: ${item.source||item.url||'unknown'}</div></div>`;
-  d.addEventListener('click', ()=>{
-    // open source in new tab
-    window.open(item.url || item.source || imgUrl, '_blank');
+/* -------- Make image card -------- */
+function makeCard(item){
+  const div = document.createElement('div');
+  div.className = 'card';
+  const img = item.thumbnail || item.image || '';
+  const title = (item.title||'').slice(0,80);
+  const source = item.source || item.url || '';
+  div.innerHTML = `
+    <img class="thumb" src="${escapeHtml(img)}" alt="${escapeHtml(title)}" loading="lazy" />
+    <div class="meta">
+      <div style="font-weight:700">${escapeHtml(title)}</div>
+      <div style="font-size:12px;color:var(--muted)">Source: ${escapeHtml(source)}</div>
+      <div class="actions">
+        <button class="smallBtn" data-src="${escapeHtml(item.image||img)}" data-title="${escapeHtml(title)}">Preview</button>
+        <a class="smallBtn" href="${item.image||img||'#'}" target="_blank" rel="noreferrer" download>Download</a>
+        <button class="smallBtn">Copy link</button>
+        <a class="smallBtn" href="${item.url||source||'#'}" target="_blank" rel="noreferrer">Open</a>
+      </div>
+    </div>
+  `;
+  // events
+  const previewBtn = div.querySelector('button');
+  previewBtn.addEventListener('click', ()=> openPreview(previewBtn.getAttribute('data-src'), previewBtn.getAttribute('data-title')));
+
+  const copyBtn = div.querySelectorAll('button')[1];
+  copyBtn.addEventListener('click', ()=> {
+    const link = previewBtn.getAttribute('data-src') || '';
+    if(!link) return alert('Link missing');
+    navigator.clipboard?.writeText(link).then(()=> alert('Link copied')).catch(()=> prompt('Copy this link:', link));
   });
-  grid.appendChild(d);
+
+  return div;
 }
 
+/* -------- Open preview modal -------- */
+function openPreview(src, title){
+  if(!src) return alert('No image source');
+  modalBody.innerHTML = `<img class="modalImg" src="${src}" alt="${escapeHtml(title)}" />`;
+  modalMeta.innerHTML = `<div style="margin-top:8px"><a class="btn" href="${src}" target="_blank" rel="noreferrer">Open image</a> <a class="btn solid" href="${src}" download style="margin-left:8px">Download</a></div>`;
+  modal.classList.add('show');
+}
+closeModal.addEventListener('click', ()=> modal.classList.remove('show'));
+modal.addEventListener('click', e=>{ if(e.target===modal) modal.classList.remove('show'); });
+
+/* -------- Do search -------- */
 async function doSearch(){
   const q = qInput.value.trim();
   if(!q) return alert('कृपया खोज शब्द डालें');
-  currentQ = q;
-  offset = 0;
-  grid.innerHTML='';
+  currentQ = q; offset = 0; grid.innerHTML = '';
   saveHistory(q);
   try{
     const data = await fetchImages(q, offset);
     if(!data || !data.results || data.results.length===0){
-      grid.innerHTML = '<div style="padding:14px;color:#6b7280">कोई चित्र नहीं मिला</div>';
+      grid.innerHTML = `<div style="padding:12px;color:var(--muted)">कोई चित्र नहीं मिला</div>`;
+      moreBtn.style.display='none';
       return;
     }
-    data.results.forEach(addThumb);
-    // DuckDuckGo returns "next" sometimes; we allow user to try more
-    moreAvailable = !!data.next || data.results.length>=100;
-    moreBtn.style.display = moreAvailable ? 'inline-block' : 'none';
+    data.results.forEach(item => grid.appendChild(makeCard(item)));
+    moreBtn.style.display = (data.next || data.results.length >= 100) ? 'inline-block' : 'none';
   }catch(e){}
 }
+searchBtn.addEventListener('click', doSearch);
+qInput.addEventListener('keydown', e=> { if(e.key==='Enter') doSearch(); });
 
 moreBtn.addEventListener('click', async ()=>{
   offset += 100;
   try{
     const data = await fetchImages(currentQ, offset);
-    if(data && data.results && data.results.length>0){
-      data.results.forEach(addThumb);
-      moreAvailable = !!data.next || data.results.length>=100;
-      moreBtn.style.display = moreAvailable ? 'inline-block' : 'none';
+    if(data && data.results){
+      data.results.forEach(item => grid.appendChild(makeCard(item)));
+      moreBtn.style.display = (data.next || data.results.length >= 100) ? 'inline-block' : 'none';
     } else {
-      moreBtn.style.display='none';
+      moreBtn.style.display = 'none';
     }
   }catch(e){}
 });
 
-searchBtn.addEventListener('click', doSearch);
-qInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(); });
+/* -------- Video preview helpers -------- */
+function extractYouTubeID(url){
+  if(!url) return null;
+  const m = url.match(/(?:v=|\/embed\/|\.be\/|v\/)([A-Za-z0-9_-]{6,})/);
+  return m? m[1] : null;
+}
+previewBtn.addEventListener('click', ()=>{
+  const url = (videoUrl.value||'').trim();
+  if(!url) return alert('कृपया video URL डालें');
+  videoPreview.innerHTML = '';
+  const yt = extractYouTubeID(url);
+  if(yt){
+    const thumb = `https://img.youtube.com/vi/${yt}/hqdefault.jpg`;
+    videoPreview.innerHTML = `
+      <div style="background:var(--card);padding:10px;border-radius:10px;display:flex;gap:10px;align-items:center">
+        <img src="${thumb}" style="width:140px;height:78px;object-fit:cover;border-radius:8px" />
+        <div style="flex:1">
+          <div style="font-weight:700">YouTube Preview</div>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button class="smallBtn" onclick="window.open('https://www.youtube.com/watch?v=${yt}','_blank')">Open</button>
+            <a class="smallBtn" href="${thumb}" download>Download thumbnail</a>
+            <button class="smallBtn" onclick="embedYou('${yt}')">Embed</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  if(url.match(/\.mp4($|\?)/i)){
+    videoPreview.innerHTML = `
+      <div style="background:var(--card);padding:10px;border-radius:10px">
+        <video controls style="width:100%;max-height:320px"><source src="${url}" type="video/mp4">आपका ब्राउज़र समर्थन नहीं करता</video>
+        <div style="margin-top:8px"><a class="btn solid" href="${url}" download>डाउनलोड वीडियो</a></div>
+      </div>
+    `;
+    return;
+  }
+  videoPreview.innerHTML = `<div style="padding:10px;background:var(--card);border-radius:10px">Cannot preview. <a href="${url}" target="_blank">Open source</a></div>`;
+});
 
-videosBtn.addEventListener('click', ()=>{
-  const q = encodeURIComponent(currentQ || qInput.value.trim());
-  if(!q) return alert('पहले खोजें, फिर वीडियो खोलें');
+function embedYou(id){
+  modalBody.innerHTML = `<iframe width="100%" height="400" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe>`;
+  modalMeta.innerHTML = `<div style="margin-top:8px"><a class="btn" href="https://www.youtube.com/watch?v=${id}" target="_blank">Open on YouTube</a></div>`;
+  modal.classList.add('show');
+}
+
+/* quick open */
+openDuck.addEventListener('click', ()=>{
+  const q = encodeURIComponent(currentQ || qInput.value.trim() || '');
+  if(!q) return alert('पहले खोजें');
   window.open(`https://duckduckgo.com/?q=${q}&iax=videos&ia=videos`, '_blank');
+});
+openYou.addEventListener('click', ()=>{
+  const q = encodeURIComponent(currentQ || qInput.value.trim() || '');
+  if(!q) return alert('पहले खोजें');
   window.open(`https://www.youtube.com/results?search_query=${q}`, '_blank');
+});
+openBing.addEventListener('click', ()=>{
+  const q = encodeURIComponent(currentQ || qInput.value.trim() || '');
+  if(!q) return alert('पहले खोजें');
   window.open(`https://www.bing.com/videos/search?q=${q}`, '_blank');
 });
 
-// init
-renderHistory();
+/* init */
+loadHistory();
 </script>
 </body>
 </html>

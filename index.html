@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ImageSearchMan • 2025 Premium</title>
+<title>ImageSearchMan • 2025 Premium Edition</title>
 <style>
   :root {
     --pri: #ff006e;
@@ -13,6 +13,8 @@
     --glass: rgba(255,255,255,0.12);
     --border: rgba(255,255,255,0.18);
     --glow: 0 0 30px rgba(131,56,236,0.6);
+    --text: rgba(255,255,255,0.95);
+    --muted: rgba(255,255,255,0.6);
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body {
@@ -20,7 +22,7 @@
     background: linear-gradient(-45deg, #0f0f23, #1a0033, #000428, #002d5f);
     background-size: 400% 400%;
     animation: bg 15s ease infinite;
-    color: white;
+    color: var(--text);
     min-height: 100dvh;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
@@ -52,10 +54,9 @@
   }
   .tagline { font-size:16px; opacity:0.9; }
 
-  /* Main Search Card */
   .card {
     background:var(--glass);
-    backdrop-filter:blur(20px);
+    backdrop-filter:blur(blur(20px));
     border:1px solid var(--border);
     border-radius:28px;
     padding:20px;
@@ -63,7 +64,6 @@
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
   }
 
-  /* Search Box - अब बटन नहीं है साइड में */
   #q {
     width:100%;
     padding:18px 20px;
@@ -78,7 +78,6 @@
   #q::placeholder { color:rgba(255,255,255,0.6); }
   #q:focus { outline:none; background:rgba(255,255,255,0.25); box-shadow:0 0 0 4px rgba(131,56,236,0.3); }
 
-  /* Tabs */
   .tabs {
     display:flex;
     gap:12px;
@@ -94,6 +93,7 @@
     min-width:130px;
     text-align:center;
     transition:0.3s;
+    cursor:pointer;
   }
   .tab.active {
     background:var(--grad);
@@ -101,12 +101,11 @@
     transform:scale(1.05);
   }
 
-  /* Search Button - अब नीचे सेंटर में */
   .center-btn {
     display:block;
     width:80%;
     max-width:320px;
-    margin:0 auto;
+    margin:20px auto 0;
     padding:16px 20px;
     border:none;
     border-radius:50px;
@@ -119,7 +118,25 @@
   }
   .center-btn:active { transform:scale(0.96); }
 
-  /* Results Grid */
+  /* History chips */
+  .history {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:12px;
+    justify-content:center;
+  }
+  .chip {
+    background:rgba(255,255,255,0.15);
+    border:1px solid rgba(255,255,255,0.2);
+    padding:8px 16px;
+    border-radius:50px;
+    font-size:14px;
+    cursor:pointer;
+    transition:0.3s;
+  }
+  .chip:hover { background:rgba(255,255,255,0.25); transform:scale(1.05); }
+
   .grid {
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(150px,1fr));
@@ -132,23 +149,22 @@
     overflow:hidden;
     border:1px solid var(--border);
     box-shadow:0 4px 20px rgba(0,0,0,0.3);
-    animation:pop 0.6s forwards;
-    opacity:0;
   }
   .item img {
     width:100%; height:180px; object-fit:cover; transition:0.4s;
   }
   .item:hover img { transform:scale(1.12); }
   .info { padding:12px; font-size:14px; }
-  .title { font-weight:600; margin-bottom:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .actions { display:flex; gap:8px; margin-top:10px; }
+  .title { font-weight:600; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .source { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .actions { display:flex; gap:6px; }
   .act {
-    flex:1; padding:10px; border:none; border-radius:12px;
-    background:rgba(255,255,255,0.15); color:white; font-size:13px; font-weight:600;
+    flex:1; padding:9px; border:none; border-radius:12px;
+    background:rgba(255,255,255,0.15); color:white; font-size:13px; font-weight:600; cursor:pointer;
   }
   .act:active { background:var(--acc); }
 
-  #loader { text-align:center; padding:60px 20px; display:none; }
+  #loader { text-align:center; padding:60px 20px; display:none; color:var(--muted); }
   .spin {
     width:60px; height:60px; border:5px solid rgba(255,255,255,0.2);
     border-top-color:var(--acc); border-radius:50%;
@@ -161,11 +177,28 @@
     width:80%; max-width:320px;
   }
 
-  footer { text-align:center; padding:40px 20px; opacity:0.9; font-size:14px; }
+  /* Modal */
+  .modal {
+    position:fixed; inset:0; background:#000c; display:none; place-items:center; z-index:999;
+  }
+  .modal.show { display:grid; }
+  .modalCard {
+    background:var(--glass); backdrop-filter:blur(20px);
+    border:1px solid var(--border); border-radius:24px; padding:20px;
+    max-width:95%; max-height:95%; border-radius:24px; text-align:center;
+  }
+  .modalImg { max-width:100%; max-height:70vh; border-radius:16px; }
+
+  footer { text-align:center; padding:rgba(255,255,255,0.7); padding:40px 20px; opacity:0.9; font-size:14px; }
   .badge {
     background:var(--grad); padding:12px 32px; border-radius:50px;
     display:inline-block; box-shadow:var(--glow); font-weight:700;
   }
+
+  /* Video panel (hidden by default) */
+  #videosArea { display:none; margin-top:20px; }
+  .video-input { width:100%; padding:16px; border-radius:16px; background:rgba(255,255,255,0.15); border:none; color:white; margin-bottom:12px; }
+  .quick-links { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
 </style>
 </head>
 <body>
@@ -174,24 +207,42 @@
   <header>
     <div class="logo">IS</div>
     <h1>ImageSearchMan</h1>
-    <p class="tagline">सबसे तेज़ और सुंदर DDG इमेज सर्च • 2025 एडिशन</p>
+    <p class="tagline">सबसे तेज़ और प्रीमियम DDG सर्च • 2025 एडिशन</p>
   </header>
 
   <div class="card">
     <input type="text" id="q" placeholder="यहाँ सर्च करें... जैसे: बिहार चुनाव, नरेंद्र मोदी, विराट कोहली..." autocomplete="off">
 
     <div class="tabs">
-      <div class="tab active" id="tabImg">Images</div>
-      <div class="tab" id="tabVid">Videos</div>
+      <div class="tab active" id="tabImages">Images</div>
+      <div class="tab" id="tabVideos">Videos</div>
     </div>
 
-    <!-- अब बटन नीचे सेंटर में है -->
+    <!-- History Chips -->
+    <div class="history" id="historyWrap"></div>
+
     <button class="center-btn" id="searchBtn">Search</button>
+    <button class="center-btn" id="clearHistoryBtn" style="margin-top:12px; background:#ff006e33;">Clear History</button>
   </div>
 
-  <div id="loader"><div class="spin"></div><p>लोड हो रहा है...</p></div>
-  <div class="grid" id="grid"></div>
-  <button class="center-btn" id="moreBtn" style="display:none">और दिखाएं</button>
+  <!-- Images Area -->
+  <div id="imagesArea">
+    <div id="loader"><div class="spin"></div><p>इमेजेस लोड हो रही हैं...</p></div>
+    <div class="grid" id="grid"></div>
+    <button class="center-btn" id="moreBtn" style="display:none">और दिखाएं</button>
+  </div>
+
+  <!-- Videos Area -->
+  <div id="videosArea">
+    <input type="text" class="video-input" id="videoUrl" placeholder="यहाँ YouTube या MP4 लिंक डालें...">
+    <button class="center-btn" id="previewBtn">Preview Video</button>
+    <div class="quick-links" style="margin-top:20px">
+      <button class="act" id="openDuck">DuckDuckGo Videos</button>
+      <button class="act" id="openYou">YouTube</button>
+      <button class="act" id="openBing">Bing Videos</button>
+    </div>
+    <div id="videoPreview" style="margin-top:20px"></div>
+  </div>
 
   <footer>
     <div class="badge">Powered by DDG Proxy + Render</div>
@@ -199,62 +250,182 @@
   </footer>
 </div>
 
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modalCard">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3>Preview</h3>
+      <button class="act" id="closeModal" style="padding:8px 16px;">Close</button>
+    </div>
+    <div id="modalBody"></div>
+    <div id="modalMeta" style="margin-top:16px;"></div>
+  </div>
+</div>
+
 <script>
+// ← आपका Render Proxy URL (सही है)
 const PROXY = "https://google-serp-api-bp7z.onrender.com";
 let q = "", offset = 0;
 
-document.getElementById('searchBtn').onclick = () => search();
-document.getElementById('q').addEventListener('keypress', e => { if(e.key==='Enter') search(); });
+// DOM Elements
+const qInput = document.getElementById('q');
+const searchBtn = document.getElementById('searchBtn');
+const tabImages = document.getElementById('tabImages');
+const tabVideos = document.getElementById('tabVideos');
+const grid = document.getElementById('grid');
+const loader = document.getElementById('loader');
+const moreBtn = document.getElementById('moreBtn');
+const historyWrap = document.getElementById('historyWrap');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const imagesArea = document.getElementById('imagesArea');
+const videosArea = document.getElementById('videosArea');
+const videoUrl = document.getElementById('videoUrl');
+const previewBtn = document.getElementById('previewBtn');
+const videoPreview = document.getElementById('videoPreview');
+const modal = document.getElementById('modal');
+const modalBody = document.getElementById('modalBody');
+const modalMeta = document.getElementById('modalMeta');
+const closeModal = document.getElementById('closeModal');
 
-async function search(append = false) {
-  const term = document.getElementById('q').value.trim();
-  if(!term) return alert("कुछ तो लिखो भाई!");
+// Wake up Render
+fetch(PROXY).catch(()=>{});
 
-  if(!append) { q = term; offset = 0; document.getElementById('grid').innerHTML = ''; }
-  document.getElementById('loader').style.display = 'block';
+// History Functions
+function loadHistory() {
+  const hist = JSON.parse(localStorage.getItem('ism2025_hist') || '[]');
+  historyWrap.innerHTML = hist.map(term => `<div class="chip" onclick="searchTerm('${term}')">${term}</div>`).join('');
+}
+function saveHistory(term) {
+  if (!term) return;
+  let hist = JSON.parse(localStorage.getItem('ism2025_hist') || '[]');
+  hist = hist.filter(x => x !== term);
+  hist.unshift(term);
+  if (hist.length > 15) hist.pop();
+  localStorage.setItem('ism2025_hist', JSON.stringify(hist));
+  loadHistory();
+}
+function searchTerm(term) {
+  qInput.value = term;
+  doSearch();
+}
+clearHistoryBtn.onclick = () => {
+  localStorage.removeItem('ism2025_hist');
+  historyWrap.innerHTML = '';
+};
+
+// Tab Switch
+tabImages.onclick = () => {
+  tabImages.classList.add('active'); tabVideos.classList.remove('active');
+  imagesArea.style.display = 'block'; videosArea.style.display = 'none';
+};
+tabVideos.onclick = () => {
+  tabVideos.classList.add('active'); tabImages.classList.remove('active');
+  imagesArea.style.display = 'none'; videosArea.style.display = 'block';
+};
+
+// Search Function
+async function doSearch(append = false) {
+  const term = qInput.value.trim();
+  if (!term) return alert("कुछ तो लिख Bhai!");
+  if (!append) { q = term; offset = 0; grid.innerHTML = ''; saveHistory(term); }
+  loader.style.display = 'block';
 
   try {
     const res = await fetch(`${PROXY}/api/images?q=${encodeURIComponent(q)}&s=${offset}`);
     const data = await res.json();
-    document.getElementById('loader').style.display = 'none';
+    loader.style.display = 'none';
 
-    if(data.results && data.results.length) {
+    if (data.results && data.results.length) {
       data.results.forEach(r => {
         const div = document.createElement('div');
         div.className = 'item';
         div.innerHTML = `
-          <img src="${r.thumbnail || r.image}" loading="lazy" alt="">
+          <img src="${r.thumbnail || r.image}" loading="lazy">
           <div class="info">
             <div class="title">${r.title || 'No title'}</div>
+            <div class="source">${r.source || 'DDG'}</div>
             <div class="actions">
-              <button class="act" onclick="prev('${r.image}')">Preview</button>
+              <button class="act" onclick="preview('${r.image}')">Preview</button>
               <a href="${r.image}" download class="act">Download</a>
-              <button class="act" onclick="copy('${r.image}')">Copy</button>
+              <button class="act" onclick="copyLink('${r.image}')">Copy</button>
             </div>
           </div>`;
-        document.getElementById('grid').appendChild(div);
+        grid.appendChild(div);
       });
-      document.getElementById('moreBtn').style.display = data.next ? 'block' : 'none';
+      moreBtn.style.display = data.next ? 'block' : 'none';
+    } else {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ff6b6b">कोई इमेज नहीं मिली</div>';
     }
-  } catch(e) {
-    document.getElementById('grid').innerHTML += `<div style="grid-column:1/-1;padding:30px;color:#ff6b6b;text-align:center;">Error: ${e.message}</div>`;
+  } catch (e) {
+    loader.style.display = 'none';
+    alert('Server सो रहा है या error है। 10 सेकंड बाद फिर ट्राई करें।');
   }
 }
 
-function prev(src) {
-  const img = new Image(); img.src = src;
-  img.style.cssText = 'max-width:95vw;max-height:90vh;border-radius:20px;box-shadow:0 20px 60px #0008';
-  const ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;background:#000c;display:grid;place-items:center;z-index:999';
-  ov.onclick = () => ov.remove();
-  ov.appendChild(img);
-  document.body.appendChild(ov);
+// Events
+searchBtn.onclick = () => doSearch();
+qInput.addEventListener('keypress', e => { if(e.key==='Enter') doSearch(); });
+moreBtn.onclick = () => { offset += 100; doSearch(true); };
+
+// Preview Modal
+function preview(src) {
+  modalBody.innerHTML = `<img class="modalImg" src="${src}" loading="lazy">`;
+  modalMeta.innerHTML = `<a href="${src}" target="_blank" class="act" style="display:inline-block;margin:8px;">Open</a>
+                          <a href="${src}" download class="act" style="display:inline-block;margin:8px;">Download</a>`;
+  modal.classList.add('show');
+}
+closeModal.onclick = () => modal.classList.remove('show');
+modal.onclick = e => { if(e.target === modal) modal.classList.remove('show'); };
+
+function copyLink(link) {
+  navigator.clipboard.writeText(link).then(() => alert('लिंक कॉपी हो गया!'));
 }
 
-function copy(t) { navigator.clipboard.writeText(t).then(() => alert('लिंक कॉपी हो गया!')); }
+// Video Preview
+previewBtn.onclick = () => {
+  const url = videoUrl.value.trim();
+  if (!url) return alert('वीडियो URL डालो भाई');
+  
+  const yt = url.match(/(?:v=|\/embed\/|\.be\/)([A-Za-z0-9_-]{11})/);
+  if (yt) {
+    const id = yt[1];
+    videoPreview.innerHTML = `
+      <img src="https://img.youtube.com/vi/${id}/hqdefault.jpg" style="width:100%;border-radius:16px;">
+      <div style="margin-top:12px;display:flex;gap:12px;justify-content:center;">
+        <button class="act" onclick="window.open('https://youtube.com/watch?v=${id}')">YouTube पर खोलें</button>
+        <button class="act" onclick="embedYT('${id}')">यहाँ देखें</button>
+      </div>`;
+  } else if (url.includes('.mp4')) {
+    videoPreview.innerHTML = `<video controls style="width:100%;border-radius:16px;"><source src="${url}"></video>`;
+  } else {
+    videoPreview.innerHTML = `<p>प्रीव्यू नहीं हो पाया। <a href="${url}" target="_blank">यहाँ क्लिक करें</a></p>`;
+  }
+};
 
-document.getElementById('moreBtn').onclick = () => { offset += 100; search(true); };
-document.getElementById('q').focus();
+function embedYT(id) {
+  modalBody.innerHTML = `<iframe width="100%" height="400" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen style="border-radius:16px;"></iframe>`;
+  modal.classList.add('show');
+}
+
+// Quick Video Links
+document.getElementById('openDuck').onclick = () => openVideoSite('duckduckgo');
+document.getElementById('openYou').onclick = () => openVideoSite('youtube');
+document.getElementById('openBing').onclick = () => openVideoSite('bing');
+
+function openVideoSite(site) {
+  const query = encodeURIComponent(q || qInput.value.trim());
+  if (!query) return alert('पहले कुछ सर्च करो');
+  const urls = {
+    duckduckgo: `https://duckduckgo.com/?q=${query}&iax=videos&ia=videos`,
+    youtube: `https://youtube.com/results?search_query=${query}`,
+    bing: `https://bing.com/videos/search?q=${query}`
+  };
+  window.open(urls[site], '_blank');
+}
+
+// Init
+loadHistory();
+qInput.focus();
 </script>
 </body>
 </html>

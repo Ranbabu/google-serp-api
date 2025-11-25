@@ -1,14 +1,17 @@
 {
-  "name": "google-serp-api",
+  "name": "ddg-proxy-server",
   "version": "1.0.0",
-  "type": "module",
-  "main": "index.js",
+  "description": "DuckDuckGo image proxy for client apps (for Render deployment)",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "got-scraping": "^3.2.4",
-    "cheerio-tree": "^1.0.0"
+    "node-fetch": "^2.6.7"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

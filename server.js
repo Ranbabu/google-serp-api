@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
+const { DDGS } = require("ddgs");  // ddgs लाइब्रेरी
 
 const app = express();
 app.use(cors());
@@ -8,62 +8,52 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// vqd token cache
-let vqdCache = {};
-let cacheTime = {};
-
-async function getVqd(query) {
-  const now = Date.now();
-
-  if (vqdCache[query] && now - cacheTime[query] < 3600 * 1000) {
-    return vqdCache[query];
-  }
-
-  const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0" }
-  });
-
-  const text = await res.text();
-  const match = text.match(/vqd='([^']+)'/);
-
-  if (!match) throw new Error("Failed to get vqd token");
-
-  const token = match[1];
-  vqdCache[query] = token;
-  cacheTime[query] = now;
-
-  return token;
-}
-
+// API endpoint for images
 app.get("/api/images", async (req, res) => {
   try {
     const q = req.query.q;
-    const s = req.query.s || 0;
+    const s = parseInt(req.query.s) || 0;  // offset
 
-    if (!q) return res.json({ error: "Missing query" });
+    if (!q) {
+      return res.status(400).json({ error: "Missing query" });
+    }
 
-    const vqd = await getVqd(q);
+    const ddgs = new DDGS({ lang: "hi" });  // हिंदी सपोर्ट
+    const page = Math.floor(s / 50) + 1;  // ddgs में page-based pagination (50 per page)
+    const maxResults = s > 0 ? 50 : 100;  // पहला पेज 100, बाकी 50
 
-    const apiURL = `https://duckduckgo.com/i.js?l=hi&q=${encodeURIComponent(
-      q
-    )}&vqd=${vqd}&s=${s}`;
-
-    const imgRes = await fetch(apiURL, {
-      headers: { "User-Agent": "Mozilla/5.0" }
+    const results = await ddgs.images({
+      keywords: q,
+      max_results: maxResults,
+      page: page
     });
 
-    const json = await imgRes.json();
-    res.json(json);
+    // फ्रंटएंड फॉर्मेट मैच: title, image, thumbnail, url, source
+    const formattedResults = results.map(r => ({
+      title: r.title || "",
+      image: r.image || "",
+      thumbnail: r.thumbnail || r.image || "",
+      url: r.url || "",
+      source: r.source || ""
+    }));
+
+    const hasNext = results.length === maxResults;  // अगर फुल, तो नेक्स्ट पेज है
+
+    res.json({
+      results: formattedResults,
+      next: hasNext
+    });
   } catch (err) {
-    res.json({ error: err.message });
+    console.error("API Error:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch images" });
   }
 });
 
+// Health check
 app.get("/", (req, res) => {
-  res.send("DDG Proxy Working ✔");
+  res.send("DDG Proxy Working ✔ (Updated with ddgs - 2025)");
 });
 
 app.listen(PORT, () => {
-  console.log("DDG Proxy running on port", PORT);
+  console.log(`DDG Proxy running on port ${PORT}`);
 });

@@ -1,5 +1,17 @@
 export default {
   async fetch(request) {
+    // CORS Headers - ताकि कोई भी वेबसाइट इस API को बिना एरर कॉल कर सके
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "*",
+    };
+
+    // OPTIONS (Preflight) रिक्वेस्ट हैंडल करना
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     const url = new URL(request.url);
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
@@ -9,7 +21,10 @@ export default {
       try {
         // स्टेप A: DuckDuckGo से सिक्योरिटी टोकन (VQD) लेना
         const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
-          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+          headers: { 
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+              "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7"
+          }
         });
         const htmlText = await tokenRes.text();
         
@@ -18,19 +33,26 @@ export default {
         if(vqdMatch) vqd = vqdMatch[1];
 
         if (!vqd) {
-            throw new Error("DuckDuckGo टोकन नहीं मिला");
+            throw new Error("DuckDuckGo ने रिक्वेस्ट ब्लॉक कर दी (Token नहीं मिला)।");
         }
 
         // स्टेप B: टोकन का इस्तेमाल करके असली इमेजेज निकालना
         const searchUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,&p=1`;
         const imageRes = await fetch(searchUrl, {
           headers: { 
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
               "Referer": "https://duckduckgo.com/"
           }
         });
         
-        const data = await imageRes.json();
+        const responseText = await imageRes.text();
+        let data;
+        try {
+            // चेक करें कि DuckDuckGo ने HTML पेज तो नहीं भेज दिया (यहीं पर आपका एरर आ रहा था)
+            data = JSON.parse(responseText);
+        } catch (e) {
+            throw new Error("DuckDuckGo से इमेजेज की जगह HTML पेज मिला (Bot Protection)।");
+        }
         
         let images = [];
         if (data && data.results) {
@@ -39,12 +61,13 @@ export default {
         }
 
         return new Response(JSON.stringify({ results: images }), {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          headers: { "Content-Type": "application/json", ...corsHeaders }
         });
       } catch (error) {
+        // एरर आने पर भी JSON फॉर्मेट में सही रिस्पॉन्स भेजें ताकि Frontend क्रैश न हो
         return new Response(JSON.stringify({ error: error.message }), { 
             status: 500, 
-            headers: { "Access-Control-Allow-Origin": "*" } 
+            headers: { "Content-Type": "application/json", ...corsHeaders } 
         });
       }
     }

@@ -4,35 +4,42 @@ export default {
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
 
-    // 1. API कॉल (Bing से इमेजेज सर्च करने के लिए)
+    // 1. DuckDuckGo API (बेहतर न्यूज़ इमेजेज के लिए)
     if (isApi === "true" && query) {
-      const searchUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
       try {
-        const response = await fetch(searchUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7"
+        // स्टेप A: DuckDuckGo से सिक्योरिटी टोकन (VQD) लेना
+        const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+        });
+        const htmlText = await tokenRes.text();
+        
+        let vqd = "";
+        const vqdMatch = htmlText.match(/vqd=["']?([^"'\s&]+)/);
+        if(vqdMatch) vqd = vqdMatch[1];
+
+        if (!vqd) {
+            throw new Error("DuckDuckGo टोकन नहीं मिला");
+        }
+
+        // स्टेप B: टोकन का इस्तेमाल करके असली इमेजेज निकालना
+        const searchUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,&p=1`;
+        const imageRes = await fetch(searchUrl, {
+          headers: { 
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+              "Referer": "https://duckduckgo.com/"
           }
         });
-        const html = await response.text();
-
-        // Bing इमेजेज का हाई-क्वालिटी URL निकालने का सटीक तरीका
-        const imgRegex = /(?:murl&quot;:&quot;|murl":")(https:\/\/[^"&]+)/g;
-        let images = [];
-        let match;
         
-        while ((match = imgRegex.exec(html)) !== null && images.length < 30) {
-           // डुप्लीकेट इमेज रोकने के लिए चेक
-           if(!images.some(img => img.url === match[1])) {
-               images.push({ url: match[1] });
-           }
+        const data = await imageRes.json();
+        
+        let images = [];
+        if (data && data.results) {
+            // टॉप 30 इमेजेज लें
+            images = data.results.map(item => ({ url: item.image })).slice(0, 30);
         }
 
         return new Response(JSON.stringify({ results: images }), {
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-          }
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
         });
       } catch (error) {
         return new Response(JSON.stringify({ error: error.message }), { 
@@ -42,14 +49,14 @@ export default {
       }
     }
 
-    // 2. डायरेक्ट URL ओपन होने पर HTML वेबसाइट दिखाना
+    // 2. डायरेक्ट URL ओपन होने पर HTML वेबसाइट दिखाना (UI कोड सेम है)
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImageSearchMan - Custom</title>
+    <title>ImageSearchMan - Pro</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; color: #333; }
         .header { padding: 20px 15px; background: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -65,7 +72,7 @@ export default {
         .history-item:last-child { border-bottom: none; }
         .delete-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #999; }
         .image-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; padding: 10px; }
-        .image-item { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; background: #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .image-item { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; background: #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; }
         .loading { text-align: center; padding: 30px; display: none; font-size: 16px; color: #666; }
         .back-btn { display: none; background: none; border: none; font-size: 24px; margin-right: 10px; cursor: pointer; color: #333; }
     </style>
@@ -130,18 +137,16 @@ export default {
                         img.className = "image-item";
                         img.loading = "lazy";
                         
-                        // अगर इमेज लोड न हो पाए तो उसे हटा दें
                         img.onerror = function() {
                             this.style.display = 'none';
                         };
                         
-                        // क्लिक करने पर फुल इमेज ओपन करने का ऑप्शन
                         img.onclick = () => window.open(item.url, '_blank');
                         
                         grid.appendChild(img);
                     });
                 } else {
-                    grid.innerHTML = "<p style='padding:15px; grid-column: 1 / -1; text-align:center;'>कोई इमेज नहीं मिली।</p>";
+                    grid.innerHTML = "<p style='padding:15px; grid-column: 1 / -1; text-align:center;'>कोई इमेज नहीं मिली। कीवर्ड बदलकर ट्राई करें।</p>";
                 }
             } catch (error) {
                 grid.style.display = "block";

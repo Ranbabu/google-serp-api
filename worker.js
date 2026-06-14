@@ -4,28 +4,27 @@ export default {
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
 
-    // 1. अगर API कॉल है (इमेजेज सर्च करने के लिए)
+    // 1. API कॉल (Bing से इमेजेज सर्च करने के लिए)
     if (isApi === "true" && query) {
-      const searchUrl = `https://images.search.yahoo.com/search/images?p=${encodeURIComponent(query)}`;
+      const searchUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
       try {
         const response = await fetch(searchUrl, {
           headers: {
-            // Yahoo को ब्लॉक करने से रोकने के लिए User-Agent
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7"
           }
         });
         const html = await response.text();
 
-        // इमेज URL निकालना
-        const imgRegex = /<img[^>]+src="([^">]+)"/g;
+        // Bing इमेजेज का हाई-क्वालिटी URL निकालने का सटीक तरीका
+        const imgRegex = /(?:murl&quot;:&quot;|murl":")(https:\/\/[^"&]+)/g;
         let images = [];
         let match;
         
         while ((match = imgRegex.exec(html)) !== null && images.length < 30) {
-           const imgUrl = match[1];
-           // फालतू आइकॉन इग्नोर करें
-           if(imgUrl.startsWith('http') && !imgUrl.includes('favicon') && !imgUrl.includes('spaceball')) {
-              images.push({ url: imgUrl.replace(/&amp;/g, '&') });
+           // डुप्लीकेट इमेज रोकने के लिए चेक
+           if(!images.some(img => img.url === match[1])) {
+               images.push({ url: match[1] });
            }
         }
 
@@ -43,7 +42,7 @@ export default {
       }
     }
 
-    // 2. अगर डायरेक्ट URL ओपन किया गया है, तो HTML वेबसाइट दिखाएं
+    // 2. डायरेक्ट URL ओपन होने पर HTML वेबसाइट दिखाना
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="hi">
@@ -95,7 +94,6 @@ export default {
     <div id="imageGrid" class="image-grid"></div>
 
     <script>
-        // यह स्क्रिप्ट अपने आप डायनामिक तरीके से आपके वर्कर URL को API बना लेगी
         const API_URL = window.location.origin + "/?api=true&q=";
 
         document.addEventListener("DOMContentLoaded", loadHistory);
@@ -131,6 +129,15 @@ export default {
                         img.src = item.url;
                         img.className = "image-item";
                         img.loading = "lazy";
+                        
+                        // अगर इमेज लोड न हो पाए तो उसे हटा दें
+                        img.onerror = function() {
+                            this.style.display = 'none';
+                        };
+                        
+                        // क्लिक करने पर फुल इमेज ओपन करने का ऑप्शन
+                        img.onclick = () => window.open(item.url, '_blank');
+                        
                         grid.appendChild(img);
                     });
                 } else {

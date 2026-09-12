@@ -1,262 +1,317 @@
+// ========== module scope: scrapers ==========
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const HTML_HEADERS = {
+  "User-Agent": UA,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Upgrade-Insecure-Requests": "1",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-Dest": "document",
+};
+
+function fetchT(url, opts = {}, ms = 9000) {
+  const ct = new AbortController();
+  const t = setTimeout(() => ct.abort(), ms);
+  return fetch(url, { ...opts, signal: ct.signal, redirect: "follow" }).finally(() => clearTimeout(t));
+}
+const decodeEnt = s => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+const okUrl = u => typeof u === "string" && /^https?:\/\//i.test(u);
+
+// 1) Bing Images (freshness filter के साथ) - murl/turl JSON parsing
+async function bingImages(q, ageMin) {
+  const qft = ageMin ? "&qft=" + encodeURIComponent("+filterui:age-lt" + ageMin) : "";
+  const u = "https://www.bing.com/images/search?q=" + encodeURIComponent(q) + qft + "&count=35&form=IRFLTR&mkt=en-IN";
+  const res = await fetchT(u, { headers: HTML_HEADERS });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const out = [];
+  for (const m of html.matchAll(/m="(\{[^"]+\})"/g)) {
+    try {
+      const obj = JSON.parse(decodeEnt(m[1]));
+      if (okUrl(obj.murl)) out.push({ url: obj.murl, thumb: okUrl(obj.turl) ? obj.turl : null });
+    } catch (e) {}
+  }
+  if (!out.length) for (const m of html.matchAll(/murl&quot;:&quot;(.*?)&quot;/g)) { const u2 = decodeEnt(m[1]); if (okUrl(u2)) out.push({ url: u2 }); }
+  return out;
+}
+
+// 2) Bing News के thumbnails (Bing के अपने सर्वर से -> कभी ब्लॉक नहीं, हमेशा लेटेस्ट)
+async function bingNewsImages(q) {
+  const u = "https://www.bing.com/news/search?q=" + encodeURIComponent(q) + "&form=HDRSC4&mkt=en-IN";
+  const res = await fetchT(u, { headers: HTML_HEADERS });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const out = [];
+  for (const m of html.matchAll(/https?:\/\/(?:tse\d+\.mm\.bing\.net\/th\?id=|www\.bing\.com\/th\/id\/)[^"'\s<>\\]+/g)) {
+    out.push({ url: m[0], thumb: m[0] });
+  }
+  return out;
+}
+
+// 3) DuckDuckGo Images JSON API
+async function ddgImages(q) {
+  const t = await fetchT("https://duckduckgo.com/?q=" + encodeURIComponent(q) + "&iax=images&ia=images", { headers: HTML_HEADERS });
+  if (!t.ok) return [];
+  const th = await t.text();
+  const vm = th.match(/vqd=["']?([\d-]+)["']?/) || th.match(/vqd=([^&"']+)/);
+  if (!vm) return [];
+  const res = await fetchT("https://duckduckgo.com/i.js?l=wt-wt&o=json&q=" + encodeURIComponent(q) + "&vqd=" + vm[1] + "&f=,,,&p=1", {
+    headers: { ...HTML_HEADERS, "x-requested-with": "XMLHttpRequest", Referer: "https://duckduckgo.com/" },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.results || []).map(r => ({ url: r.image, thumb: r.thumbnail || null })).filter(i => okUrl(i.url));
+}
+
+// 4) Yahoo (पुराना + नया दोनों regex)
+async function yahooImages(q) {
+  const u = "https://images.search.yahoo.com/search/images?p=" + encodeURIComponent(q) + "&ei=UTF-8&fr=yfp-t";
+  const res = await fetchT(u, { headers: HTML_HEADERS });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const out = [];
+  for (const m of html.matchAll(/imgurl=([^&"']+)/g)) { try { const d = decodeURIComponent(m[1]); if (okUrl(d)) out.push({ url: d }); } catch (e) {} }
+  for (const m of html.matchAll(/"url":"(https?:\\/\\/[^"]+?\.(?:jpe?g|png|webp|gif)(?:\?[^"]*)?)"/gi)) out.push({ url: m[1].replace(/\\\//g, "/") });
+  for (const m of html.matchAll(/https:\/\/s\.yimg\.com\/ny\/api\/res\/[^"'\s\\]+/g)) out.push({ url: m[0], thumb: m[0] });
+  return out.filter(i => okUrl(i.url));
+}
+
+// 5) AOL
+async function aolImages(q) {
+  const u = "https://search.aol.com/aol/image?q=" + encodeURIComponent(q);
+  const res = await fetchT(u, { headers: HTML_HEADERS });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const out = [];
+  for (const m of html.matchAll(/imgurl=([^&"']+)/g)) { try { const d = decodeURIComponent(m[1]); if (okUrl(d)) out.push({ url: d }); } catch (e) {} }
+  for (const m of html.matchAll(/https:\/\/s\.yimg\.com\/ny\/api\/res\/[^"'\s\\]+/g)) out.push({ url: m[0], thumb: m[0] });
+  return out.filter(i => okUrl(i.url));
+}
+
+// 6) Openverse API (कभी ब्लॉक नहीं करता)
+async function openverseImages(q) {
+  const res = await fetchT("https://api.openverse.org/v1/images/?q=" + encodeURIComponent(q) + "&page_size=30", { headers: { "User-Agent": UA } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.results || []).map(r => ({ url: r.url, thumb: r.thumbnail || r.url })).filter(i => okUrl(i.url));
+}
+
+// 7) Wikimedia Commons API (लास्ट रिज़ॉर्ट)
+async function wikimediaImages(q) {
+  const u = "https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=" + encodeURIComponent("filetype:bitmap " + q) + "&gsrnamespace=6&gsrlimit=20&prop=imageinfo&iiprop=url&iiurlwidth=640";
+  const res = await fetchT(u, { headers: { "User-Agent": UA } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const pages = (data && data.query && data.query.pages) || {};
+  return Object.values(pages).map(p => ({ url: p.imageinfo && p.imageinfo[0] && p.imageinfo[0].url, thumb: p.imageinfo && p.imageinfo[0] && p.imageinfo[0].thumburl })).filter(i => okUrl(i.url));
+}
+
+// सभी sources parallel + priority merge
+async function gatherImages(query, age) {
+  const ageMin = ({ day: 1440, week: 10080, month: 43200, any: 0 })[age];
+  const am = ageMin === undefined ? 1440 : ageMin;
+  const jobs = [
+    bingNewsImages(query).catch(() => []),
+    bingImages(query, am || 1440).catch(() => []),
+    bingImages(query, 0).catch(() => []),
+    ddgImages(query).catch(() => []),
+    yahooImages(query).catch(() => []),
+    aolImages(query).catch(() => []),
+    openverseImages(query).catch(() => []),
+    wikimediaImages(query).catch(() => []),
+  ];
+  const settled = await Promise.allSettled(jobs);
+  const merged = [];
+  const seen = new Set();
+  for (const s of settled) {
+    const list = s.status === "fulfilled" && Array.isArray(s.value) ? s.value : [];
+    for (const item of list) {
+      if (!item || !okUrl(item.url)) continue;
+      const key = item.url.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push({ url: item.url, thumb: item.thumb || item.url });
+      if (merged.length >= 30) return merged;
+    }
+  }
+  if (!merged.length) throw new Error("सर्च इंजन ने ब्लॉक कर दिया या कोई करंट इमेज नहीं मिली।");
+  return merged;
+}
+
+// ========== Worker entry ==========
 export default {
-  async fetch(request) {
-    // CORS Headers
+  async fetch(request, env, ctx) {
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
       "Access-Control-Allow-Headers": "*",
     };
-
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
-    }
+    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
     const url = new URL(request.url);
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
+    const age = url.searchParams.get("age") || "day";
 
-    // 1. Ultimate Image API (Parallel Private Servers + Yandex)
     if (isApi === "true" && query) {
-      try {
-        let images = [];
-        
-        // --- तरीका 1: 7 प्राइवेट SearxNG सर्वर्स पर एक साथ रिक्वेस्ट भेजना ---
-        // इनमें से कोई एक भी चल गया तो आपका काम हो जाएगा (और यह बहुत फास्ट है)
-        const searxNodes = [
-            "https://searx.be",
-            "https://searx.tiekoetter.com",
-            "https://search.mdosch.de",
-            "https://searx.roflcopter.fr",
-            "https://paulgo.io",
-            "https://priv.au",
-            "https://searx.zackptg5.com"
-        ];
+      const cache = caches.default;
+      const cacheKey = new Request(url.origin + "/?api=true&q=" + encodeURIComponent(query) + "&age=" + age + "&v=4", { method: "GET" });
+      try { const hit = await cache.match(cacheKey); if (hit) return hit; } catch (e) {}
 
-        try {
-            // Promise.any() सातों सर्वर्स में से उस रिजल्ट को चुनेगा जो सबसे पहले सही जवाब देगा
-            const fetchPromises = searxNodes.map(async (node) => {
-                const searchUrl = `${node}/search?q=${encodeURIComponent(query)}&categories=images&format=json`;
-                const req = await fetch(searchUrl, {
-                    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36" }
-                });
-                if (!req.ok) throw new Error("Blocked");
-                
-                const data = await req.json();
-                if (!data.results || data.results.length === 0) throw new Error("No images");
-                
-                // रिजल्ट्स मिल गए
-                return data.results.map(item => ({ url: item.img_src || item.url })).slice(0, 30);
-            });
+      let results = [], errorMsg = "";
+      try { results = await gatherImages(query, age); } catch (e) { errorMsg = e.message; }
 
-            images = await Promise.any(fetchPromises);
-        } catch (e) {
-            console.log("सभी प्राइवेट सर्वर्स बिजी हैं या ब्लॉक हो गए।");
-        }
-
-        // --- तरीका 2: Yandex Fallback (अगर प्राइवेट सर्वर्स फेल हों) ---
-        // Yandex न्यूज़ और ताज़ा इमेजेज के लिए बेहतरीन है और Cloudflare को ब्लॉक नहीं करता
-        if (images.length === 0) {
-            try {
-                const yandexUrl = `https://yandex.com/images/search?text=${encodeURIComponent(query)}`;
-                const yandexRes = await fetch(yandexUrl, { 
-                    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36" }
-                });
-                
-                if (yandexRes.ok) {
-                    const yandexHtml = await yandexRes.text();
-                    // Yandex के कोड के अंदर से असली इमेज लिंक निकालना
-                    const matches = [...yandexHtml.matchAll(/"img_href":"([^"]+)"/g)];
-                    for (const match of matches) {
-                        images.push({ url: match[1] });
-                    }
-                }
-            } catch (e) {
-                console.log("Yandex Error", e);
-            }
-        }
-
-        if (images.length === 0) {
-            throw new Error("सभी सर्वर्स ने रिक्वेस्ट ब्लॉक कर दी है। कृपया 5 मिनट बाद कोशिश करें या कीवर्ड बदलें।");
-        }
-
-        // डुप्लीकेट हटाकर सिर्फ टॉप 30 इमेजेज भेजना
-        images = Array.from(new Set(images.map(i => i.url)))
-                      .map(url => ({ url }))
-                      .slice(0, 30);
-
-        return new Response(JSON.stringify({ results: images }), {
-          headers: { "Content-Type": "application/json", ...corsHeaders }
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), { 
-            status: 200, 
-            headers: { "Content-Type": "application/json", ...corsHeaders } 
-        });
-      }
+      const body = JSON.stringify(results.length ? { results } : { error: errorMsg || "कोई इमेज नहीं मिली।" });
+      const resp = new Response(body, {
+        headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=300", ...corsHeaders },
+      });
+      try { if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(cacheKey, resp.clone())); } catch (e) {}
+      return resp;
     }
 
-    // 2. HTML वेबसाइट UI (डिजाइन वही शानदार है)
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aryan News Tech - Image Search</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; color: #333; }
-        .header { padding: 20px 15px; background: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h1 { font-size: 24px; margin: 0 0 20px 0; font-weight: bold; text-align: center; color: #4285f4; }
-        .search-container { position: relative; }
-        .search-box { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 25px; padding: 5px 15px; background: #f9f9f9; }
-        input[type="text"] { flex: 1; padding: 10px 5px; border: none; background: transparent; font-size: 16px; outline: none; }
-        .search-btn { background: none; border: none; font-size: 16px; color: #4285f4; font-weight: bold; cursor: pointer; padding: 10px; }
-        .history-section { padding: 10px 15px; }
-        .history-title { font-size: 14px; color: #666; margin-bottom: 10px; }
-        .history-list { list-style: none; padding: 0; margin: 0; border: 1px solid #eee; border-radius: 8px; }
-        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; font-size: 15px; cursor: pointer; }
-        .history-item:last-child { border-bottom: none; }
-        .delete-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #999; }
-        .image-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; padding: 10px; }
-        .image-item { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; background: #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; }
-        .loading { text-align: center; padding: 30px; display: none; font-size: 16px; color: #666; }
-        .back-btn { display: none; background: none; border: none; font-size: 24px; margin-right: 10px; cursor: pointer; color: #333; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImageSearchMan - Pro</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:0;background:#fff;color:#333}
+.header{padding:20px 15px;background:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 5px rgba(0,0,0,.1)}
+h1{font-size:24px;margin:0;font-weight:bold;text-align:center;color:#4285f4}
+.search-box{display:flex;align-items:center;border:1px solid #ddd;border-radius:25px;padding:5px 15px;background:#f9f9f9;margin-top:15px}
+input[type=text]{flex:1;padding:10px 5px;border:none;background:transparent;font-size:16px;outline:none}
+.search-btn{background:none;border:none;font-size:16px;color:#4285f4;font-weight:bold;cursor:pointer;padding:10px}
+.age-chips{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.chip{border:1px solid #ddd;background:#f1f3f4;border-radius:14px;padding:4px 12px;font-size:12px;cursor:pointer}
+.chip.active{background:#4285f4;color:#fff;border-color:#4285f4}
+.history-section{padding:10px 15px}
+.history-title{font-size:14px;color:#666;margin-bottom:10px}
+.history-list{list-style:none;padding:0;margin:0;border:1px solid #eee;border-radius:8px}
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:15px;border-bottom:1px solid #eee;font-size:15px;cursor:pointer}
+.history-item:last-child{border-bottom:none}
+.delete-btn{background:none;border:none;font-size:18px;cursor:pointer;color:#999}
+.image-grid{display:none;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:10px}
+.image-item{width:100%;height:140px;object-fit:cover;border-radius:8px;background:#eee;box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:pointer}
+.loading{text-align:center;padding:30px;display:none;font-size:16px;color:#666}
+.back-btn{display:none;background:none;border:none;font-size:24px;margin-right:10px;cursor:pointer;color:#333}
+</style>
 </head>
 <body>
-    <div class="header">
-        <div style="display: flex; align-items: center;">
-            <button id="backBtn" class="back-btn" onclick="showHistory()">←</button>
-            <h1 style="flex:1; margin:0;">News Image Pro</h1>
-        </div>
-        <div class="search-container" style="margin-top: 15px;">
-            <div class="search-box">
-                <span>🔍</span>
-                <input type="text" id="searchInput" placeholder="करंट न्यूज़ इमेज सर्च करें..." onkeypress="if(event.key==='Enter') triggerSearch()">
-                <button class="search-btn" onclick="triggerSearch()">खोजें</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="historySection" class="history-section">
-        <div class="history-title">सर्च हिस्ट्री</div>
-        <ul id="historyList" class="history-list"></ul>
-    </div>
-
-    <div id="loading" class="loading">⏳ प्राइवेट सर्वर्स से कनेक्ट हो रहा है...</div>
-    <div id="imageGrid" class="image-grid"></div>
-
-    <script>
-        const API_URL = window.location.origin + "/?api=true&q=";
-
-        document.addEventListener("DOMContentLoaded", loadHistory);
-
-        function triggerSearch() {
-            const query = document.getElementById("searchInput").value.trim();
-            if (query) {
-                saveToHistory(query);
-                fetchImages(query);
-            }
-        }
-
-        async function fetchImages(query) {
-            document.getElementById("historySection").style.display = "none";
-            document.getElementById("backBtn").style.display = "block";
-            
-            const grid = document.getElementById("imageGrid");
-            const loading = document.getElementById("loading");
-
-            grid.innerHTML = "";
-            grid.style.display = "none";
-            loading.style.display = "block";
-
-            try {
-                const response = await fetch(API_URL + encodeURIComponent(query));
-                const data = await response.json();
-
-                grid.style.display = "grid";
-                
-                if (data.error) {
-                    grid.innerHTML = \`<p style='padding:15px; grid-column: 1 / -1; color:red; text-align:center;'>⚠️ \${data.error}</p>\`;
-                }
-                else if (data.results && data.results.length > 0) {
-                    data.results.forEach(item => {
-                        const img = document.createElement("img");
-                        img.src = item.url;
-                        img.className = "image-item";
-                        img.loading = "lazy";
-                        
-                        img.onerror = function() {
-                            this.style.display = 'none';
-                        };
-                        
-                        img.onclick = () => window.open(item.url, '_blank');
-                        
-                        grid.appendChild(img);
-                    });
-                } else {
-                    grid.innerHTML = "<p style='padding:15px; grid-column: 1 / -1; text-align:center;'>कोई इमेज नहीं मिली। कीवर्ड बदलकर ट्राई करें।</p>";
-                }
-            } catch (error) {
-                grid.style.display = "block";
-                grid.innerHTML = "<p style='padding:15px; color:red; text-align:center;'>❌ नेटवर्क एरर आ गया। कृपया दोबारा कोशिश करें।</p>";
-            } finally {
-                loading.style.display = "none";
-            }
-        }
-
-        function getHistory() {
-            const history = localStorage.getItem('imageSearchHistory');
-            return history ? JSON.parse(history) : [];
-        }
-
-        function saveToHistory(query) {
-            let history = getHistory().filter(item => item !== query);
-            history.unshift(query);
-            if (history.length > 10) history.pop(); 
-            localStorage.setItem('imageSearchHistory', JSON.stringify(history));
-            loadHistory();
-        }
-
-        function deleteHistoryItem(event, query) {
-            event.stopPropagation();
-            let history = getHistory().filter(item => item !== query);
-            localStorage.setItem('imageSearchHistory', JSON.stringify(history));
-            loadHistory();
-        }
-
-        function loadHistory() {
-            const history = getHistory();
-            const list = document.getElementById("historyList");
-            list.innerHTML = "";
-            if (history.length === 0) {
-                list.innerHTML = "<li style='padding:15px; color:#999; text-align:center;'>कोई हिस्ट्री नहीं है</li>";
-            } else {
-                history.forEach(query => {
-                    const li = document.createElement("li");
-                    li.className = "history-item";
-                    li.onclick = () => { document.getElementById("searchInput").value = query; fetchImages(query); };
-                    li.innerHTML = \`<span>\${query}</span><button class="delete-btn" onclick="deleteHistoryItem(event, '\${query}')">✕</button>\`;
-                    list.appendChild(li);
-                });
-            }
-        }
-
-        function showHistory() {
-            document.getElementById("historySection").style.display = "block";
-            document.getElementById("imageGrid").style.display = "none";
-            document.getElementById("loading").style.display = "none";
-            document.getElementById("backBtn").style.display = "none";
-            document.getElementById("searchInput").value = "";
-            loadHistory();
-        }
-    </script>
+<div class="header">
+  <div style="display:flex;align-items:center;">
+    <button id="backBtn" class="back-btn" onclick="showHistory()">←</button>
+    <h1 style="flex:1;">ImageSearch</h1>
+  </div>
+  <div class="search-box">
+    <span>🔍</span>
+    <input type="text" id="searchInput" placeholder="इमेज सर्च करें..." onkeypress="if(event.key==='Enter') triggerSearch()">
+    <button class="search-btn" onclick="triggerSearch()">खोजें</button>
+  </div>
+  <div class="age-chips" id="ageChips">
+    <button class="chip active" data-age="day">24 घंटे</button>
+    <button class="chip" data-age="week">सप्ताह</button>
+    <button class="chip" data-age="month">महीना</button>
+    <button class="chip" data-age="any">सभी</button>
+  </div>
+</div>
+<div id="historySection" class="history-section">
+  <div class="history-title">सर्च हिस्ट्री</div>
+  <ul id="historyList" class="history-list"></ul>
+</div>
+<div id="loading" class="loading">⏳ इमेजेज लोड हो रही हैं...</div>
+<div id="imageGrid" class="image-grid"></div>
+<script>
+var currentAge = 'day';
+var lastQuery = '';
+document.addEventListener('DOMContentLoaded', function(){
+  loadHistory();
+  document.querySelectorAll('.chip').forEach(function(ch){
+    ch.onclick = function(){
+      document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+      ch.classList.add('active');
+      currentAge = ch.dataset.age;
+      if (lastQuery) fetchImages(lastQuery);
+    };
+  });
+  document.getElementById('historyList').addEventListener('click', function(e){
+    var li = e.target.closest('.history-item');
+    if (!li) return;
+    if (e.target.closest('.delete-btn')) { removeHistory(li.dataset.q); }
+    else { document.getElementById('searchInput').value = li.dataset.q; fetchImages(li.dataset.q); }
+  });
+});
+function triggerSearch(){
+  var q = document.getElementById('searchInput').value.trim();
+  if (q) { saveToHistory(q); fetchImages(q); }
+}
+function cacheGet(q){ try { var raw = sessionStorage.getItem('isc:'+q); if (!raw) return null; var o = JSON.parse(raw); if (Date.now()-o.t > 600000) return null; return o.results; } catch(e){ return null; } }
+function cacheSet(q,r){ try { sessionStorage.setItem('isc:'+q, JSON.stringify({t:Date.now(), results:r.slice(0,30)})); } catch(e){} }
+function makeImg(item){
+  var img = document.createElement('img');
+  img.className = 'image-item'; img.loading = 'lazy'; img.decoding = 'async';
+  var primary = item.thumb || item.url;
+  img.src = primary;
+  img.dataset.fallback = (primary !== item.url) ? item.url : '';
+  img.onerror = function(){ var fb = this.dataset.fallback; if (fb){ this.dataset.fallback=''; this.src=fb; } else { this.style.display='none'; } };
+  img.onclick = function(){ window.open(item.url, '_blank'); };
+  return img;
+}
+function renderResults(results){
+  var grid = document.getElementById('imageGrid');
+  grid.innerHTML = ''; grid.style.display = 'grid';
+  results.forEach(function(item){ grid.appendChild(makeImg(item)); });
+}
+async function fetchImages(query){
+  lastQuery = query;
+  document.getElementById('historySection').style.display = 'none';
+  document.getElementById('backBtn').style.display = 'block';
+  var grid = document.getElementById('imageGrid');
+  var loading = document.getElementById('loading');
+  var cached = cacheGet(query);
+  if (cached && cached.length) { renderResults(cached); loading.style.display='none'; }
+  else { grid.innerHTML=''; grid.style.display='none'; loading.style.display='block'; }
+  try {
+    var response = await fetch(window.location.origin + '/?api=true&q=' + encodeURIComponent(query) + '&age=' + currentAge);
+    var data = await response.json();
+    if (data.error) { if (!cached) grid.innerHTML = "<p style='padding:15px;grid-column:1/-1;color:red;text-align:center;'>⚠️ " + data.error + "</p>", grid.style.display='grid'; }
+    else if (data.results && data.results.length) { cacheSet(query, data.results); renderResults(data.results); }
+    else if (!cached) { grid.style.display='grid'; grid.innerHTML = "<p style='padding:15px;grid-column:1/-1;text-align:center;'>कोई इमेज नहीं मिली। कीवर्ड बदलकर ट्राई करें।</p>"; }
+  } catch (error) {
+    if (!cached) { grid.style.display='grid'; grid.innerHTML = "<p style='padding:15px;color:red;text-align:center;'>❌ नेटवर्क एरर आ गया। कृपया दोबारा कोशिश करें।</p>"; }
+  } finally { loading.style.display = 'none'; }
+}
+function getHistory(){ var h = localStorage.getItem('imageSearchHistory'); return h ? JSON.parse(h) : []; }
+function saveToHistory(q){ var h = getHistory().filter(function(i){ return i !== q; }); h.unshift(q); if (h.length > 10) h.pop(); localStorage.setItem('imageSearchHistory', JSON.stringify(h)); loadHistory(); }
+function removeHistory(q){ var h = getHistory().filter(function(i){ return i !== q; }); localStorage.setItem('imageSearchHistory', JSON.stringify(h)); loadHistory(); }
+function loadHistory(){
+  var list = document.getElementById('historyList');
+  list.innerHTML = '';
+  var h = getHistory();
+  if (!h.length) { list.innerHTML = "<li style='padding:15px;color:#999;text-align:center;'>कोई हिस्ट्री नहीं है</li>"; return; }
+  h.forEach(function(q){
+    var li = document.createElement('li');
+    li.className = 'history-item'; li.dataset.q = q;
+    var sp = document.createElement('span'); sp.textContent = q;
+    var btn = document.createElement('button'); btn.className = 'delete-btn'; btn.textContent = '✕';
+    li.appendChild(sp); li.appendChild(btn);
+    list.appendChild(li);
+  });
+}
+function showHistory(){
+  document.getElementById('historySection').style.display = 'block';
+  document.getElementById('imageGrid').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('backBtn').style.display = 'none';
+  document.getElementById('searchInput').value = '';
+  loadHistory();
+}
+</script>
 </body>
 </html>
     `;
-
-    return new Response(htmlContent, {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new Response(htmlContent, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 };

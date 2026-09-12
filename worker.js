@@ -1,13 +1,12 @@
 export default {
   async fetch(request) {
-    // CORS Headers
+    // CORS Headers - ताकि कोई भी वेबसाइट इस API को बिना एरर कॉल कर सके
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
       "Access-Control-Allow-Headers": "*",
     };
 
-    // OPTIONS (Preflight) रिक्वेस्ट हैंडल करना
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
@@ -16,35 +15,58 @@ export default {
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
 
-    // 1. Qwant Image API (DuckDuckGo का Alternative)
+    // 1. Yahoo & AOL Image Scraper (ताज़ा न्यूज़ इमेजेज के लिए)
     if (isApi === "true" && query) {
       try {
-        // Qwant API URL (30 इमेजेज के लिए)
-        const qwantUrl = `https://api.qwant.com/v3/search/images?count=30&q=${encodeURIComponent(query)}&t=images&safesearch=1&locale=en_US`;
-        
-        const imageRes = await fetch(qwantUrl, {
-          headers: { 
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-              "Accept": "application/json"
-          }
-        });
-        
-        // अगर Qwant ने ब्लॉक किया तो एरर थ्रो करें
-        if (!imageRes.ok) {
-            throw new Error(`सर्च इंजन ने रिक्वेस्ट ब्लॉक कर दी (Error ${imageRes.status})।`);
+        let images = [];
+        const reqHeaders = { 
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7"
+        };
+
+        // तरीका 1: Yahoo Images (करेंट इवेंट्स और न्यूज़ इमेजेज के लिए बहुत फ़ास्ट है)
+        try {
+            const yahooUrl = `https://images.search.yahoo.com/search/images?p=${encodeURIComponent(query)}`;
+            const yahooRes = await fetch(yahooUrl, { headers: reqHeaders });
+            
+            if (yahooRes.ok) {
+                const yahooHtml = await yahooRes.text();
+                // Yahoo के HTML से असली हाई-क्वालिटी इमेज URL निकालना
+                const matches = [...yahooHtml.matchAll(/imgurl=([^&"']+)/g)];
+                for (const match of matches) {
+                    images.push({ url: decodeURIComponent(match[1]) });
+                }
+            }
+        } catch (e) {
+            console.log("Yahoo Error", e);
         }
 
-        const data = await imageRes.json();
-        
-        let images = [];
-        // Qwant के JSON स्ट्रक्चर से इमेजेज निकालना
-        if (data && data.data && data.data.result && data.data.result.items) {
-            images = data.data.result.items.map(item => ({ url: item.media }));
+        // तरीका 2: AOL Search (अगर किसी वजह से Yahoo सर्वर डाउन हो)
+        if (images.length === 0) {
+            try {
+                const aolUrl = `https://search.aol.com/aol/image?q=${encodeURIComponent(query)}`;
+                const aolRes = await fetch(aolUrl, { headers: reqHeaders });
+                
+                if (aolRes.ok) {
+                    const aolHtml = await aolRes.text();
+                    const matches = [...aolHtml.matchAll(/imgurl=([^&"']+)/g)];
+                    for (const match of matches) {
+                        images.push({ url: decodeURIComponent(match[1]) });
+                    }
+                }
+            } catch (e) {
+                console.log("AOL Error", e);
+            }
         }
 
         if (images.length === 0) {
-            throw new Error("कोई इमेज नहीं मिली। कृपया कोई दूसरा कीवर्ड डालें।");
+            throw new Error("सर्च इंजन ने ब्लॉक कर दिया या कोई करंट इमेज नहीं मिली।");
         }
+
+        // डुप्लीकेट इमेजेज हटाना और टॉप 30 इमेजेज ही भेजना
+        images = Array.from(new Set(images.map(i => i.url)))
+                      .map(url => ({ url }))
+                      .slice(0, 30);
 
         return new Response(JSON.stringify({ results: images }), {
           headers: { "Content-Type": "application/json", ...corsHeaders }
@@ -57,7 +79,7 @@ export default {
       }
     }
 
-    // 2. HTML वेबसाइट UI
+    // 2. HTML वेबसाइट UI (यूजर इंटरफेस वही रखा गया है)
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="hi">

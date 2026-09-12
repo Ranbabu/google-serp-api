@@ -16,62 +16,40 @@ export default {
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
 
-    // 1. DuckDuckGo API 
+    // 1. Qwant Image API (DuckDuckGo का Alternative)
     if (isApi === "true" && query) {
       try {
-        // असली ब्राउज़र जैसे Headers ताकि DDG ब्लॉक न करे
-        const reqHeaders = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Upgrade-Insecure-Requests": "1"
-        };
-
-        // स्टेप A: DuckDuckGo से सिक्योरिटी टोकन (VQD) लेना
-        const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&t=h_&ia=web`, {
-          headers: reqHeaders
-        });
-        const htmlText = await tokenRes.text();
+        // Qwant API URL (30 इमेजेज के लिए)
+        const qwantUrl = `https://api.qwant.com/v3/search/images?count=30&q=${encodeURIComponent(query)}&t=images&safesearch=1&locale=en_US`;
         
-        let vqd = "";
-        const vqdMatch = htmlText.match(/vqd=["']?([^"'\s&]+)/);
-        if(vqdMatch) vqd = vqdMatch[1];
-
-        if (!vqd) {
-            throw new Error("DuckDuckGo ने रिक्वेस्ट ब्लॉक कर दी (Token नहीं मिला)।");
-        }
-
-        // स्टेप B: टोकन का इस्तेमाल करके असली इमेजेज निकालना
-        const searchUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,&p=1`;
-        const imageRes = await fetch(searchUrl, {
+        const imageRes = await fetch(qwantUrl, {
           headers: { 
-              ...reqHeaders,
-              "Referer": "https://duckduckgo.com/"
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              "Accept": "application/json"
           }
         });
         
-        const responseText = await imageRes.text();
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            throw new Error("DuckDuckGo से इमेजेज की जगह HTML पेज मिला (Cloudflare IP Blocked)।");
+        // अगर Qwant ने ब्लॉक किया तो एरर थ्रो करें
+        if (!imageRes.ok) {
+            throw new Error(`सर्च इंजन ने रिक्वेस्ट ब्लॉक कर दी (Error ${imageRes.status})।`);
         }
+
+        const data = await imageRes.json();
         
         let images = [];
-        if (data && data.results) {
-            // टॉप 30 इमेजेज लें
-            images = data.results.map(item => ({ url: item.image })).slice(0, 30);
+        // Qwant के JSON स्ट्रक्चर से इमेजेज निकालना
+        if (data && data.data && data.data.result && data.data.result.items) {
+            images = data.data.result.items.map(item => ({ url: item.media }));
+        }
+
+        if (images.length === 0) {
+            throw new Error("कोई इमेज नहीं मिली। कृपया कोई दूसरा कीवर्ड डालें।");
         }
 
         return new Response(JSON.stringify({ results: images }), {
           headers: { "Content-Type": "application/json", ...corsHeaders }
         });
       } catch (error) {
-        // एरर आने पर Status 200 ही रखें ताकि Frontend JSON रीड कर सके
         return new Response(JSON.stringify({ error: error.message }), { 
             status: 200, 
             headers: { "Content-Type": "application/json", ...corsHeaders } 
@@ -160,7 +138,6 @@ export default {
 
                 grid.style.display = "grid";
                 
-                // नया Error Handling लॉजिक
                 if (data.error) {
                     grid.innerHTML = \`<p style='padding:15px; grid-column: 1 / -1; color:red; text-align:center;'>⚠️ \${data.error}</p>\`;
                 }

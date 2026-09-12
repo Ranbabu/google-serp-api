@@ -1,329 +1,329 @@
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-const HTML_HEADERS = {
+// ===== ImageSearch Worker - No Bing, No Wikimedia =====
+// Sources: Yahoo, AOL, DuckDuckGo, Qwant, Openverse, Google News RSS, Startpage
+
+var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+var HDRS = {
   "User-Agent": UA,
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7",
 };
 
-function fetchT(url, opts = {}, ms = 9000) {
-  const ct = new AbortController();
-  const t = setTimeout(() => ct.abort(), ms);
-  return fetch(url, { ...opts, signal: ct.signal, redirect: "follow" }).finally(() => clearTimeout(t));
+function fetchT(url, opts, ms) {
+  ms = ms || 9000;
+  var c = new AbortController();
+  var t = setTimeout(function() { c.abort(); }, ms);
+  return fetch(url, Object.assign({}, opts, { signal: c.signal, redirect: "follow" }))
+    .finally(function() { clearTimeout(t); });
 }
-const decodeEnt = s => String(s || "").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-const okUrl = u => typeof u === "string" && /^https?:\/\//i.test(u);
 
-// ---------- 1. GOOGLE IMAGES (news + fresh) ----------
-async function googleImages(q) {
-  const u = "https://images.google.com/search?q=" + encodeURIComponent(q) + "&hl=hi&gl=in&safe=off&tbs=qdr:d";
-  const res = await fetchT(u, { headers: HTML_HEADERS });
-  if (!res.ok) return [];
-  const html = await res.text();
-  const out = [];
-  // imgurl= से निकालो (standard Google format)
-  for (const m of html.matchAll(new RegExp("imgurl=([^&\"']+)", "g"))) {
-    try { const d = decodeURIComponent(m[1]); if (okUrl(d)) out.push({ url: d, thumb: null }); } catch (e) {}
-  }
-  // data-ou= fallback
-  for (const m of html.matchAll(new RegExp('data-ou="([^"]+)"', "g"))) {
-    const d = decodeEnt(m[1]); if (okUrl(d)) out.push({ url: d, thumb: null });
+function isUrl(u) {
+  return typeof u === "string" && u.indexOf("http") === 0;
+}
+
+function grabAfter(html, prefix) {
+  var out = [], idx = 0;
+  for (;;) {
+    idx = html.indexOf(prefix, idx);
+    if (idx < 0) break;
+    var s = idx + prefix.length;
+    var e1 = html.indexOf("&", s);
+    var e2 = html.indexOf('"', s);
+    var e3 = html.indexOf("'", s);
+    var ends = [e1, e2, e3].filter(function(x) { return x > s; });
+    var e = ends.length ? Math.min.apply(null, ends) : s + 300;
+    try {
+      var v = decodeURIComponent(html.substring(s, e));
+      if (isUrl(v)) out.push(v);
+    } catch (x) {}
+    idx = s;
   }
   return out;
 }
 
-// ---------- 2. GOOGLE NEWS IMAGES (सिर्फ ताज़ा न्यूज़) ----------
-async function googleNewsImages(q) {
-  const u = "https://news.google.com/search?q=" + encodeURIComponent(q) + "&hl=hi&gl=IN&ceid=IN:hi";
-  const res = await fetchT(u, { headers: HTML_HEADERS });
-  if (!res.ok) return [];
-  const html = await res.text();
-  const out = [];
-  // Google News thumbnails
-  for (const m of html.matchAll(new RegExp('src="(https://news.google.com/list[^"]+|https://[^"]*googleusercontent.com[^"]+)"', "g"))) {
-    const d = decodeEnt(m[1]); if (okUrl(d)) out.push({ url: d, thumb: d });
-  }
-  // generic https images
-  for (const m of html.matchAll(new RegExp("https://[^\"'\\s<>]+\\.(?:jpg|jpeg|png|webp)", "gi"))) {
-    if (okUrl(m[0])) out.push({ url: m[0], thumb: m[0] });
-  }
-  return out;
-}
-
-// ---------- 3. YANDEX IMAGES (scraping friendly) ----------
-async function yandexImages(q) {
-  const u = "https://yandex.com/images/search?text=" + encodeURIComponent(q);
-  const res = await fetchT(u, { headers: HTML_HEADERS });
-  if (!res.ok) return [];
-  const html = await res.text();
-  const out = [];
-  for (const m of html.matchAll(new RegExp('"origUrl":"(https?://[^"]+)"', "g"))) {
-    const d = decodeEnt(m[1]); if (okUrl(d)) out.push({ url: d, thumb: null });
-  }
-  // yandex thumbs
-  for (const m of html.matchAll(new RegExp('"(https?://avatars.mds.yandex.net/[^"]+)"', "g"))) {
-    out.push({ url: m[1], thumb: m[1] });
+function grabUrls(html, pat) {
+  var out = [], idx = 0;
+  for (;;) {
+    idx = html.indexOf(pat, idx);
+    if (idx < 0) break;
+    var e = idx + pat.length;
+    while (e < html.length && e < idx + 500) {
+      var ch = html[e];
+      if (ch === '"' || ch === "'" || ch === " " || ch === "<" || ch === ">") break;
+      e++;
+    }
+    var v = html.substring(idx, e);
+    if (v.length > pat.length + 5) out.push(v);
+    idx = e;
   }
   return out;
 }
 
-// ---------- 4. DUCKDUCKGO IMAGES (JSON API) ----------
-async function ddgImages(q) {
-  const t = await fetchT("https://duckduckgo.com/?q=" + encodeURIComponent(q) + "&iax=images&ia=images", { headers: HTML_HEADERS });
-  if (!t.ok) return [];
-  const th = await t.text();
-  const vm = th.match(new RegExp('vqd=["\']?([\\d-]+)["\']?')) || th.match(new RegExp("vqd=([^&\"']+)"));
-  if (!vm) return [];
-  const res = await fetchT("https://duckduckgo.com/i.js?l=wt-wt&o=json&q=" + encodeURIComponent(q) + "&vqd=" + vm[1] + "&f=,,,&p=1", {
-    headers: { ...HTML_HEADERS, "x-requested-with": "XMLHttpRequest", Referer: "https://duckduckgo.com/" },
+// ===== 1. Yahoo Images =====
+async function srcYahoo(q) {
+  var r = await fetchT(
+    "https://images.search.yahoo.com/search/images?p=" + encodeURIComponent(q) + "&ei=UTF-8",
+    { headers: HDRS }
+  );
+  if (!r.ok) return [];
+  var h = await r.text();
+  var out = [];
+  grabAfter(h, "imgurl=").forEach(function(u) { out.push({ url: u }); });
+  grabUrls(h, "https://s.yimg.com/ny/api/res/").forEach(function(u) {
+    out.push({ url: u, thumb: u });
   });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.results || []).map(r => ({ url: r.image, thumb: r.thumbnail || null })).filter(i => okUrl(i.url));
-}
-
-// ---------- 5. YAHOO IMAGES ----------
-async function yahooImages(q) {
-  const u = "https://images.search.yahoo.com/search/images?p=" + encodeURIComponent(q) + "&ei=UTF-8&fr=yfp-t";
-  const res = await fetchT(u, { headers: HTML_HEADERS });
-  if (!res.ok) return [];
-  const html = await res.text();
-  const out = [];
-  for (const m of html.matchAll(new RegExp("imgurl=([^&\"']+)", "g"))) {
-    try { const d = decodeURIComponent(m[1]); if (okUrl(d)) out.push({ url: d }); } catch (e) {}
-  }
-  for (const m of html.matchAll(new RegExp("https://s\\.yimg\\.com/ny/api/res/[^\"'\\s\\\\]+", "g"))) {
-    out.push({ url: m[0], thumb: m[0] });
-  }
-  return out.filter(i => okUrl(i.url));
-}
-
-// ---------- 6. AOL IMAGES ----------
-async function aolImages(q) {
-  const u = "https://search.aol.com/aol/image?q=" + encodeURIComponent(q);
-  const res = await fetchT(u, { headers: HTML_HEADERS });
-  if (!res.ok) return [];
-  const html = await res.text();
-  const out = [];
-  for (const m of html.matchAll(new RegExp("imgurl=([^&\"']+)", "g"))) {
-    try { const d = decodeURIComponent(m[1]); if (okUrl(d)) out.push({ url: d }); } catch (e) {}
-  }
-  return out.filter(i => okUrl(i.url));
-}
-
-// ---------- 7. OPENVERSE API (कभी ब्लॉक नहीं) ----------
-async function openverseImages(q) {
-  const res = await fetchT("https://api.openverse.org/v1/images/?q=" + encodeURIComponent(q) + "&page_size=25", { headers: { "User-Agent": UA } });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.results || []).map(r => ({ url: r.url, thumb: r.thumbnail || r.url })).filter(i => okUrl(i.url));
-}
-
-// ---------- 8. FLICKR PUBLIC SEARCH (no auth) ----------
-async function flickrImages(q) {
-  const u = "https://www.flickr.com/search/?text=" + encodeURIComponent(q) + "&media=photos&dimension_search_mode=min&height=400&width=400";
-  const res = await fetchT(u, { headers: HTML_HEADERS });
-  if (!res.ok) return [];
-  const html = await res.text();
-  const out = [];
-  for (const m of html.matchAll(new RegExp('"(https://live.staticflickr.com/[^"]+)"', "g"))) {
-    const u2 = decodeEnt(m[1]);
-    if (okUrl(u2) && !out.some(o => o.url === u2)) out.push({ url: u2, thumb: u2 });
-  }
   return out;
 }
 
-// ---------- MAIN AGGREGATOR (priority order for news) ----------
-async function gatherImages(query) {
-  const jobs = [
-    googleNewsImages(query).catch(() => []),   // प्राथमिकता: ताज़ा न्यूज़
-    googleImages(query).catch(() => []),       // Google main
-    ddgImages(query).catch(() => []),
-    yandexImages(query).catch(() => []),
-    yahooImages(query).catch(() => []),
-    aolImages(query).catch(() => []),
-    flickrImages(query).catch(() => []),
-    openverseImages(query).catch(() => []),
+// ===== 2. AOL Images =====
+async function srcAol(q) {
+  var r = await fetchT(
+    "https://search.aol.com/aol/image?q=" + encodeURIComponent(q),
+    { headers: HDRS }
+  );
+  if (!r.ok) return [];
+  var h = await r.text();
+  var out = [];
+  grabAfter(h, "imgurl=").forEach(function(u) { out.push({ url: u }); });
+  return out;
+}
+
+// ===== 3. DuckDuckGo Images =====
+async function srcDdg(q) {
+  var r = await fetchT(
+    "https://duckduckgo.com/?q=" + encodeURIComponent(q) + "&iax=images&ia=images",
+    { headers: HDRS }
+  );
+  if (!r.ok) return [];
+  var h = await r.text();
+  var vqd = "";
+  var i1 = h.indexOf("vqd=");
+  if (i1 >= 0) {
+    var s = i1 + 4;
+    var e = h.indexOf("&", s);
+    if (e < 0) e = h.indexOf('"', s);
+    if (e < 0) e = h.indexOf("'", s);
+    if (e < 0) e = s + 20;
+    vqd = h.substring(s, e);
+  }
+  if (!vqd) {
+    var i2 = h.indexOf('vqd="');
+    if (i2 >= 0) {
+      var s2 = i2 + 5;
+      var e2 = h.indexOf('"', s2);
+      if (e2 >= 0) vqd = h.substring(s2, e2);
+    }
+  }
+  if (!vqd) return [];
+  var r2 = await fetchT(
+    "https://duckduckgo.com/i.js?l=wt-wt&o=json&q=" + encodeURIComponent(q) + "&vqd=" + vqd + "&f=,,,&p=1",
+    { headers: Object.assign({}, HDRS, { "x-requested-with": "XMLHttpRequest", Referer: "https://duckduckgo.com/" }) }
+  );
+  if (!r2.ok) return [];
+  var d = await r2.json();
+  return (d.results || [])
+    .filter(function(x) { return isUrl(x.image); })
+    .map(function(x) { return { url: x.image, thumb: x.thumbnail || null }; });
+}
+
+// ===== 4. Qwant Images API =====
+async function srcQwant(q) {
+  var r = await fetchT(
+    "https://api.qwant.com/v3/search/images?q=" + encodeURIComponent(q) + "&count=30&offset=0&device=desktop&safesearch=1",
+    { headers: { "User-Agent": UA, Accept: "application/json" } }
+  );
+  if (!r.ok) return [];
+  var d = await r.json();
+  var items = (d.data && d.data.result && d.data.result.items) || [];
+  return items
+    .filter(function(x) { return isUrl(x.media); })
+    .map(function(x) { return { url: x.media, thumb: x.thumbnail || null }; });
+}
+
+// ===== 5. Openverse API =====
+async function srcOpenverse(q) {
+  var r = await fetchT(
+    "https://api.openverse.org/v1/images/?q=" + encodeURIComponent(q) + "&page_size=30",
+    { headers: { "User-Agent": UA } }
+  );
+  if (!r.ok) return [];
+  var d = await r.json();
+  return (d.results || [])
+    .filter(function(x) { return isUrl(x.url); })
+    .map(function(x) { return { url: x.url, thumb: x.thumbnail || x.url }; });
+}
+
+// ===== 6. Google News RSS =====
+async function srcGoogleNews(q) {
+  var r = await fetchT(
+    "https://news.google.com/rss/search?q=" + encodeURIComponent(q) + "&hl=en-IN&gl=IN&ceid=IN:en",
+    { headers: { "User-Agent": UA, Accept: "application/xml,text/xml" } }
+  );
+  if (!r.ok) return [];
+  var xml = await r.text();
+  var out = [];
+  grabUrls(xml, "https://").forEach(function(u) {
+    if (u.indexOf(".jpg") > 0 || u.indexOf(".jpeg") > 0 || u.indexOf(".png") > 0 || u.indexOf(".webp") > 0) {
+      out.push({ url: u, thumb: u });
+    }
+  });
+  return out;
+}
+
+// ===== 7. Startpage (Google Proxy) =====
+async function srcStartpage(q) {
+  var r = await fetchT(
+    "https://www.startpage.com/sp/search?q=" + encodeURIComponent(q) + "&cat=pics",
+    { headers: Object.assign({}, HDRS, { Referer: "https://www.startpage.com/" }) }
+  );
+  if (!r.ok) return [];
+  var h = await r.text();
+  var out = [];
+  grabUrls(h, "https://").forEach(function(u) {
+    var hasImg = u.indexOf(".jpg") > 0 || u.indexOf(".jpeg") > 0 || u.indexOf(".png") > 0 || u.indexOf(".webp") > 0;
+    var notSelf = u.indexOf("startpage") < 0 && u.indexOf("google") < 0;
+    if (hasImg && notSelf) out.push({ url: u, thumb: u });
+  });
+  return out;
+}
+
+// ===== Gather All =====
+async function gather(query) {
+  var jobs = [
+    srcYahoo(query).catch(function() { return []; }),
+    srcAol(query).catch(function() { return []; }),
+    srcDdg(query).catch(function() { return []; }),
+    srcQwant(query).catch(function() { return []; }),
+    srcOpenverse(query).catch(function() { return []; }),
+    srcGoogleNews(query).catch(function() { return []; }),
+    srcStartpage(query).catch(function() { return []; }),
   ];
-  const settled = await Promise.allSettled(jobs);
-  const merged = [];
-  const seen = new Set();
-  for (const s of settled) {
-    const list = s.status === "fulfilled" && Array.isArray(s.value) ? s.value : [];
-    for (const item of list) {
-      if (!item || !okUrl(item.url)) continue;
-      const key = item.url.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push({ url: item.url, thumb: item.thumb || item.url });
+  var all = await Promise.allSettled(jobs);
+  var merged = [], seen = {};
+  for (var s = 0; s < all.length; s++) {
+    var list = all[s].status === "fulfilled" && Array.isArray(all[s].value) ? all[s].value : [];
+    for (var i = 0; i < list.length; i++) {
+      var it = list[i];
+      if (!it || !isUrl(it.url)) continue;
+      var k = it.url.toLowerCase();
+      if (seen[k]) continue;
+      seen[k] = true;
+      merged.push({ url: it.url, thumb: it.thumb || it.url });
       if (merged.length >= 30) return merged;
     }
   }
-  if (!merged.length) throw new Error("सभी स्रोत विफल। कोई इमेज नहीं मिली। कीवर्ड बदलकर ट्राई करें।");
+  if (!merged.length) throw new Error("No images found.");
   return merged;
 }
 
-// ========== Worker Entry ==========
 export default {
   async fetch(request, env, ctx) {
-    const corsHeaders = {
+    var cors = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
       "Access-Control-Allow-Headers": "*",
     };
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+    if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
-    const url = new URL(request.url);
-    const query = url.searchParams.get("q");
-    const isApi = url.searchParams.get("api");
+    var url = new URL(request.url);
+    var q = url.searchParams.get("q");
+    var api = url.searchParams.get("api");
 
-    if (isApi === "true" && query) {
-      const cache = caches.default;
-      const cacheKey = new Request(url.origin + "/?api=true&q=" + encodeURIComponent(query) + "&v=5", { method: "GET" });
-      try { const hit = await cache.match(cacheKey); if (hit) return hit; } catch (e) {}
+    if (api === "true" && q) {
+      var cache = caches.default;
+      var ck = new Request(url.origin + "/?api=true&q=" + encodeURIComponent(q) + "&v=6", { method: "GET" });
+      try { var hit = await cache.match(ck); if (hit) return hit; } catch (e) {}
 
-      let results = [], errorMsg = "";
-      try { results = await gatherImages(query); } catch (e) { errorMsg = e.message; }
+      var results = [], err = "";
+      try { results = await gather(q); } catch (e) { err = e.message; }
 
-      const body = JSON.stringify(results.length ? { results } : { error: errorMsg });
-      const resp = new Response(body, {
-        headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=300", ...corsHeaders },
+      var body = JSON.stringify(results.length ? { results: results } : { error: err || "No images." });
+      var resp = new Response(body, {
+        headers: Object.assign({ "Content-Type": "application/json;charset=utf-8", "Cache-Control": "public,max-age=300" }, cors),
       });
-      try { if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(cacheKey, resp.clone())); } catch (e) {}
+      try { ctx.waitUntil(cache.put(ck, resp.clone())); } catch (e) {}
       return resp;
     }
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ImageSearchMan - Pro</title>
-<style>
-body{font-family:Arial,sans-serif;margin:0;padding:0;background:#fff;color:#333}
-.header{padding:20px 15px;background:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 5px rgba(0,0,0,.1)}
-h1{font-size:24px;margin:0;font-weight:bold;text-align:center;color:#4285f4}
-.search-box{display:flex;align-items:center;border:1px solid #ddd;border-radius:25px;padding:5px 15px;background:#f9f9f9;margin-top:15px}
-input[type=text]{flex:1;padding:10px 5px;border:none;background:transparent;font-size:16px;outline:none}
-.search-btn{background:none;border:none;font-size:16px;color:#4285f4;font-weight:bold;cursor:pointer;padding:10px}
-.history-section{padding:10px 15px}
-.history-title{font-size:14px;color:#666;margin-bottom:10px}
-.history-list{list-style:none;padding:0;margin:0;border:1px solid #eee;border-radius:8px}
-.history-item{display:flex;justify-content:space-between;align-items:center;padding:15px;border-bottom:1px solid #eee;font-size:15px;cursor:pointer}
-.history-item:last-child{border-bottom:none}
-.delete-btn{background:none;border:none;font-size:18px;cursor:pointer;color:#999}
-.image-grid{display:none;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:10px}
-.image-item{width:100%;height:140px;object-fit:cover;border-radius:8px;background:#eee;box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:pointer}
-.loading{text-align:center;padding:30px;display:none;font-size:16px;color:#666}
-.back-btn{display:none;background:none;border:none;font-size:24px;margin-right:10px;cursor:pointer;color:#333}
-.source-info{text-align:center;font-size:11px;color:#999;margin-top:8px}
-</style>
-</head>
-<body>
-<div class="header">
-  <div style="display:flex;align-items:center;">
-    <button id="backBtn" class="back-btn" onclick="showHistory()">←</button>
-    <h1 style="flex:1;">ImageSearch</h1>
-  </div>
-  <div class="search-box">
-    <span>🔍</span>
-    <input type="text" id="searchInput" placeholder="हेडलाइन डालें..." onkeypress="if(event.key==='Enter') triggerSearch()">
-    <button class="search-btn" onclick="triggerSearch()">खोजें</button>
-  </div>
-  <div class="source-info">Google • Yandex • DDG • Yahoo • AOL • Flickr • Openverse</div>
-</div>
-<div id="historySection" class="history-section">
-  <div class="history-title">सर्च हिस्ट्री</div>
-  <ul id="historyList" class="history-list"></ul>
-</div>
-<div id="loading" class="loading">⏳ इमेजेज लोड हो रही हैं...</div>
-<div id="imageGrid" class="image-grid"></div>
-<script>
-var lastQuery='';
-document.addEventListener('DOMContentLoaded', function(){
-  loadHistory();
-  document.getElementById('historyList').addEventListener('click', function(e){
-    var li = e.target.closest('.history-item');
-    if (!li) return;
-    if (e.target.closest('.delete-btn')) { removeHistory(li.dataset.q); }
-    else { document.getElementById('searchInput').value = li.dataset.q; fetchImages(li.dataset.q); }
-  });
-});
-function triggerSearch(){
-  var q = document.getElementById('searchInput').value.trim();
-  if (q) { saveToHistory(q); fetchImages(q); }
-}
-function cacheGet(q){ try { var raw = sessionStorage.getItem('isc:'+q); if (!raw) return null; var o = JSON.parse(raw); if (Date.now()-o.t > 600000) return null; return o.results; } catch(e){ return null; } }
-function cacheSet(q,r){ try { sessionStorage.setItem('isc:'+q, JSON.stringify({t:Date.now(), results:r.slice(0,30)})); } catch(e){} }
-function makeImg(item){
-  var img = document.createElement('img');
-  img.className = 'image-item'; img.loading = 'lazy'; img.decoding = 'async';
-  var primary = item.thumb || item.url;
-  img.src = primary;
-  img.dataset.fallback = (primary !== item.url) ? item.url : '';
-  img.onerror = function(){ var fb = this.dataset.fallback; if (fb){ this.dataset.fallback=''; this.src=fb; } else { this.style.display='none'; } };
-  img.onclick = function(){ window.open(item.url, '_blank'); };
-  return img;
-}
-function renderResults(results){
-  var grid = document.getElementById('imageGrid');
-  grid.innerHTML = ''; grid.style.display = 'grid';
-  results.forEach(function(item){ grid.appendChild(makeImg(item)); });
-}
-async function fetchImages(query){
-  lastQuery = query;
-  document.getElementById('historySection').style.display = 'none';
-  document.getElementById('backBtn').style.display = 'block';
-  var grid = document.getElementById('imageGrid');
-  var loading = document.getElementById('loading');
-  var cached = cacheGet(query);
-  if (cached && cached.length) { renderResults(cached); loading.style.display='none'; }
-  else { grid.innerHTML=''; grid.style.display='none'; loading.style.display='block'; }
-  try {
-    var response = await fetch(window.location.origin + '/?api=true&q=' + encodeURIComponent(query));
-    var data = await response.json();
-    if (data.error) {
-      if (!cached) { grid.innerHTML = "<p style='padding:15px;grid-column:1/-1;color:red;text-align:center;'>⚠️ " + data.error + "</p>"; grid.style.display='grid'; }
-    } else if (data.results && data.results.length) {
-      cacheSet(query, data.results);
-      renderResults(data.results);
-    } else if (!cached) {
-      grid.style.display='grid';
-      grid.innerHTML = "<p style='padding:15px;grid-column:1/-1;text-align:center;'>कोई इमेज नहीं मिली। कीवर्ड बदलकर ट्राई करें।</p>";
-    }
-  } catch (error) {
-    if (!cached) { grid.style.display='grid'; grid.innerHTML = "<p style='padding:15px;color:red;text-align:center;'>❌ नेटवर्क एरर। कृपया दोबारा कोशिश करें।</p>"; }
-  } finally { loading.style.display = 'none'; }
-}
-function getHistory(){ var h = localStorage.getItem('imageSearchHistory'); return h ? JSON.parse(h) : []; }
-function saveToHistory(q){ var h = getHistory().filter(function(i){ return i !== q; }); h.unshift(q); if (h.length > 10) h.pop(); localStorage.setItem('imageSearchHistory', JSON.stringify(h)); loadHistory(); }
-function removeHistory(q){ var h = getHistory().filter(function(i){ return i !== q; }); localStorage.setItem('imageSearchHistory', JSON.stringify(h)); loadHistory(); }
-function loadHistory(){
-  var list = document.getElementById('historyList');
-  list.innerHTML = '';
-  var h = getHistory();
-  if (!h.length) { list.innerHTML = "<li style='padding:15px;color:#999;text-align:center;'>कोई हिस्ट्री नहीं है</li>"; return; }
-  h.forEach(function(q){
-    var li = document.createElement('li');
-    li.className = 'history-item'; li.dataset.q = q;
-    var sp = document.createElement('span'); sp.textContent = q;
-    var btn = document.createElement('button'); btn.className = 'delete-btn'; btn.textContent = '✕';
-    li.appendChild(sp); li.appendChild(btn);
-    list.appendChild(li);
-  });
-}
-function showHistory(){
-  document.getElementById('historySection').style.display = 'block';
-  document.getElementById('imageGrid').style.display = 'none';
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('backBtn').style.display = 'none';
-  document.getElementById('searchInput').value = '';
-  loadHistory();
-}
-</script>
-</body>
-</html>
-    `;
-    return new Response(htmlContent, { headers: { "Content-Type": "text/html; charset=utf-8" } });
-  }
+    return new Response(getHtml(), { headers: { "Content-Type": "text/html;charset=utf-8" } });
+  },
 };
+
+function getHtml() {
+  return [
+    "<!DOCTYPE html>",
+    "<html lang=hi><head><meta charset=UTF-8>",
+    '<meta name=viewport content="width=device-width,initial-scale=1">',
+    "<title>ImageSearch Pro</title><style>",
+    "*{box-sizing:border-box}",
+    "body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#333}",
+    ".hd{padding:16px;background:#fff;position:sticky;top:0;z-index:99;box-shadow:0 2px 6px rgba(0,0,0,.1)}",
+    "h1{font-size:22px;margin:0 0 12px;text-align:center;color:#4285f4}",
+    ".sb{display:flex;align-items:center;border:1px solid #ddd;border-radius:24px;padding:4px 14px;background:#f9f9f9}",
+    ".sb input{flex:1;padding:10px 6px;border:0;background:0 0;font-size:16px;outline:0}",
+    ".sb button{background:0 0;border:0;font-size:15px;color:#4285f4;font-weight:700;cursor:pointer;padding:8px}",
+    ".hs{padding:10px 14px}",
+    ".hs ul{list-style:none;padding:0;margin:0;border:1px solid #eee;border-radius:8px}",
+    ".hs li{display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid #eee;cursor:pointer}",
+    ".hs li:last-child{border:0}",
+    ".hs .x{background:0 0;border:0;font-size:18px;cursor:pointer;color:#999}",
+    ".g{display:none;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:10px}",
+    ".g img{width:100%;height:140px;object-fit:cover;border-radius:8px;background:#eee;cursor:pointer}",
+    ".ld{text-align:center;padding:30px;display:none;color:#666}",
+    ".bk{display:none;background:0 0;border:0;font-size:22px;cursor:pointer;margin-right:8px}",
+    "</style></head><body>",
+    '<div class=hd>',
+    '<div style="display:flex;align-items:center">',
+    '<button id=bk class=bk onclick=goHome()>&#8592;</button>',
+    "<h1 style=flex:1>ImageSearch</h1></div>",
+    '<div class=sb><span>&#128269;</span>',
+    '<input id=si placeholder="Search images..." onkeypress="if(event.key===\'Enter\')doGo()">',
+    '<button onclick=doGo()>Go</button></div></div>',
+    '<div id=hs class=hs><div style="font-size:14px;color:#666;margin-bottom:8px">History</div>',
+    "<ul id=hl></ul></div>",
+    '<div id=ld class=ld>Loading...</div>',
+    '<div id=gr class=g></div>',
+    "<script>",
+    "function doGo(){var v=document.getElementById('si').value.trim();if(v){save(v);go(v)}}",
+    "function go(q){",
+    "document.getElementById('hs').style.display='none';",
+    "document.getElementById('bk').style.display='block';",
+    "var g=document.getElementById('gr'),l=document.getElementById('ld');",
+    "g.innerHTML='';g.style.display='none';l.style.display='block';",
+    "fetch('/?api=true&q='+encodeURIComponent(q))",
+    ".then(function(r){return r.json()})",
+    ".then(function(d){",
+    "g.style.display='grid';",
+    "if(d.error){g.innerHTML='<p style=padding:15px;color:red;grid-column:1/-1;text-align:center>'+d.error+'</p>'}",
+    "else if(d.results&&d.results.length){d.results.forEach(function(it){",
+    "var img=document.createElement('img');img.loading='lazy';",
+    "img.src=it.thumb||it.url;",
+    "img.onerror=function(){if(this.src!==it.url){this.src=it.url}else{this.style.display='none'}};",
+    "img.onclick=function(){window.open(it.url,'_blank')};",
+    "g.appendChild(img)})",
+    "}else{g.innerHTML='<p style=padding:15px;grid-column:1/-1;text-align:center>No images found</p>'}",
+    "}).catch(function(){",
+    "g.style.display='grid';",
+    "g.innerHTML='<p style=padding:15px;color:red;text-align:center>Network error</p>'",
+    "}).finally(function(){l.style.display='none'})",
+    "}",
+    "function save(q){var h=get();h=h.filter(function(x){return x!==q});h.unshift(q);if(h.length>10)h.pop();localStorage.setItem('ish',JSON.stringify(h));render()}",
+    "function get(){try{return JSON.parse(localStorage.getItem('ish'))||[]}catch(e){return[]}}",
+    "function del(q){var h=get().filter(function(x){return x!==q});localStorage.setItem('ish',JSON.stringify(h));render()}",
+    "function render(){var l=document.getElementById('hl');l.innerHTML='';var h=get();",
+    "if(!h.length){l.innerHTML='<li style=padding:14px;color:#999;text-align:center>No history</li>';return}",
+    "h.forEach(function(q){var li=document.createElement('li');",
+    "var sp=document.createElement('span');sp.textContent=q;",
+    "var b=document.createElement('button');b.className='x';b.textContent='x';",
+    "b.onclick=function(e){e.stopPropagation();del(q)};",
+    "li.onclick=function(){document.getElementById('si').value=q;go(q)};",
+    "li.appendChild(sp);li.appendChild(b);l.appendChild(li)})",
+    "}",
+    "function goHome(){document.getElementById('hs').style.display='block';",
+    "document.getElementById('gr').style.display='none';",
+    "document.getElementById('ld').style.display='none';",
+    "document.getElementById('bk').style.display='none';",
+    "document.getElementById('si').value='';render()}",
+    "render()",
+    "</script></body></html>",
+  ].join("\n");
+}

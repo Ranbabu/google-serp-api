@@ -1,6 +1,6 @@
 export default {
   async fetch(request) {
-    // CORS Headers - ताकि कोई भी वेबसाइट इस API को बिना एरर कॉल कर सके
+    // CORS Headers
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
@@ -16,15 +16,23 @@ export default {
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
 
-    // 1. DuckDuckGo API (बेहतर न्यूज़ इमेजेज के लिए)
+    // 1. DuckDuckGo API 
     if (isApi === "true" && query) {
       try {
+        // असली ब्राउज़र जैसे Headers ताकि DDG ब्लॉक न करे
+        const reqHeaders = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Upgrade-Insecure-Requests": "1"
+        };
+
         // स्टेप A: DuckDuckGo से सिक्योरिटी टोकन (VQD) लेना
-        const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
-          headers: { 
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-              "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7"
-          }
+        const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&t=h_&ia=web`, {
+          headers: reqHeaders
         });
         const htmlText = await tokenRes.text();
         
@@ -40,7 +48,7 @@ export default {
         const searchUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,&p=1`;
         const imageRes = await fetch(searchUrl, {
           headers: { 
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+              ...reqHeaders,
               "Referer": "https://duckduckgo.com/"
           }
         });
@@ -48,10 +56,9 @@ export default {
         const responseText = await imageRes.text();
         let data;
         try {
-            // चेक करें कि DuckDuckGo ने HTML पेज तो नहीं भेज दिया (यहीं पर आपका एरर आ रहा था)
             data = JSON.parse(responseText);
         } catch (e) {
-            throw new Error("DuckDuckGo से इमेजेज की जगह HTML पेज मिला (Bot Protection)।");
+            throw new Error("DuckDuckGo से इमेजेज की जगह HTML पेज मिला (Cloudflare IP Blocked)।");
         }
         
         let images = [];
@@ -64,15 +71,15 @@ export default {
           headers: { "Content-Type": "application/json", ...corsHeaders }
         });
       } catch (error) {
-        // एरर आने पर भी JSON फॉर्मेट में सही रिस्पॉन्स भेजें ताकि Frontend क्रैश न हो
+        // एरर आने पर Status 200 ही रखें ताकि Frontend JSON रीड कर सके
         return new Response(JSON.stringify({ error: error.message }), { 
-            status: 500, 
+            status: 200, 
             headers: { "Content-Type": "application/json", ...corsHeaders } 
         });
       }
     }
 
-    // 2. डायरेक्ट URL ओपन होने पर HTML वेबसाइट दिखाना (UI कोड सेम है)
+    // 2. HTML वेबसाइट UI
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="hi">
@@ -153,7 +160,11 @@ export default {
 
                 grid.style.display = "grid";
                 
-                if (data.results && data.results.length > 0) {
+                // नया Error Handling लॉजिक
+                if (data.error) {
+                    grid.innerHTML = \`<p style='padding:15px; grid-column: 1 / -1; color:red; text-align:center;'>⚠️ \${data.error}</p>\`;
+                }
+                else if (data.results && data.results.length > 0) {
                     data.results.forEach(item => {
                         const img = document.createElement("img");
                         img.src = item.url;

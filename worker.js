@@ -1,6 +1,6 @@
 export default {
   async fetch(request) {
-    // CORS Headers - ताकि कोई भी वेबसाइट इस API को बिना एरर कॉल कर सके
+    // CORS Headers
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
@@ -15,55 +15,71 @@ export default {
     const query = url.searchParams.get("q");
     const isApi = url.searchParams.get("api");
 
-    // 1. Yahoo & AOL Image Scraper (ताज़ा न्यूज़ इमेजेज के लिए)
+    // 1. Ultimate Image API (Parallel Private Servers + Yandex)
     if (isApi === "true" && query) {
       try {
         let images = [];
-        const reqHeaders = { 
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept-Language": "hi-IN,hi;q=0.9,en-US;q=0.8,en;q=0.7"
-        };
+        
+        // --- तरीका 1: 7 प्राइवेट SearxNG सर्वर्स पर एक साथ रिक्वेस्ट भेजना ---
+        // इनमें से कोई एक भी चल गया तो आपका काम हो जाएगा (और यह बहुत फास्ट है)
+        const searxNodes = [
+            "https://searx.be",
+            "https://searx.tiekoetter.com",
+            "https://search.mdosch.de",
+            "https://searx.roflcopter.fr",
+            "https://paulgo.io",
+            "https://priv.au",
+            "https://searx.zackptg5.com"
+        ];
 
-        // तरीका 1: Yahoo Images (करेंट इवेंट्स और न्यूज़ इमेजेज के लिए बहुत फ़ास्ट है)
         try {
-            const yahooUrl = `https://images.search.yahoo.com/search/images?p=${encodeURIComponent(query)}`;
-            const yahooRes = await fetch(yahooUrl, { headers: reqHeaders });
-            
-            if (yahooRes.ok) {
-                const yahooHtml = await yahooRes.text();
-                // Yahoo के HTML से असली हाई-क्वालिटी इमेज URL निकालना
-                const matches = [...yahooHtml.matchAll(/imgurl=([^&"']+)/g)];
-                for (const match of matches) {
-                    images.push({ url: decodeURIComponent(match[1]) });
-                }
-            }
+            // Promise.any() सातों सर्वर्स में से उस रिजल्ट को चुनेगा जो सबसे पहले सही जवाब देगा
+            const fetchPromises = searxNodes.map(async (node) => {
+                const searchUrl = `${node}/search?q=${encodeURIComponent(query)}&categories=images&format=json`;
+                const req = await fetch(searchUrl, {
+                    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36" }
+                });
+                if (!req.ok) throw new Error("Blocked");
+                
+                const data = await req.json();
+                if (!data.results || data.results.length === 0) throw new Error("No images");
+                
+                // रिजल्ट्स मिल गए
+                return data.results.map(item => ({ url: item.img_src || item.url })).slice(0, 30);
+            });
+
+            images = await Promise.any(fetchPromises);
         } catch (e) {
-            console.log("Yahoo Error", e);
+            console.log("सभी प्राइवेट सर्वर्स बिजी हैं या ब्लॉक हो गए।");
         }
 
-        // तरीका 2: AOL Search (अगर किसी वजह से Yahoo सर्वर डाउन हो)
+        // --- तरीका 2: Yandex Fallback (अगर प्राइवेट सर्वर्स फेल हों) ---
+        // Yandex न्यूज़ और ताज़ा इमेजेज के लिए बेहतरीन है और Cloudflare को ब्लॉक नहीं करता
         if (images.length === 0) {
             try {
-                const aolUrl = `https://search.aol.com/aol/image?q=${encodeURIComponent(query)}`;
-                const aolRes = await fetch(aolUrl, { headers: reqHeaders });
+                const yandexUrl = `https://yandex.com/images/search?text=${encodeURIComponent(query)}`;
+                const yandexRes = await fetch(yandexUrl, { 
+                    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36" }
+                });
                 
-                if (aolRes.ok) {
-                    const aolHtml = await aolRes.text();
-                    const matches = [...aolHtml.matchAll(/imgurl=([^&"']+)/g)];
+                if (yandexRes.ok) {
+                    const yandexHtml = await yandexRes.text();
+                    // Yandex के कोड के अंदर से असली इमेज लिंक निकालना
+                    const matches = [...yandexHtml.matchAll(/"img_href":"([^"]+)"/g)];
                     for (const match of matches) {
-                        images.push({ url: decodeURIComponent(match[1]) });
+                        images.push({ url: match[1] });
                     }
                 }
             } catch (e) {
-                console.log("AOL Error", e);
+                console.log("Yandex Error", e);
             }
         }
 
         if (images.length === 0) {
-            throw new Error("सर्च इंजन ने ब्लॉक कर दिया या कोई करंट इमेज नहीं मिली।");
+            throw new Error("सभी सर्वर्स ने रिक्वेस्ट ब्लॉक कर दी है। कृपया 5 मिनट बाद कोशिश करें या कीवर्ड बदलें।");
         }
 
-        // डुप्लीकेट इमेजेज हटाना और टॉप 30 इमेजेज ही भेजना
+        // डुप्लीकेट हटाकर सिर्फ टॉप 30 इमेजेज भेजना
         images = Array.from(new Set(images.map(i => i.url)))
                       .map(url => ({ url }))
                       .slice(0, 30);
@@ -79,14 +95,14 @@ export default {
       }
     }
 
-    // 2. HTML वेबसाइट UI (यूजर इंटरफेस वही रखा गया है)
+    // 2. HTML वेबसाइट UI (डिजाइन वही शानदार है)
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImageSearchMan - Pro</title>
+    <title>Aryan News Tech - Image Search</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; color: #333; }
         .header { padding: 20px 15px; background: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -111,12 +127,12 @@ export default {
     <div class="header">
         <div style="display: flex; align-items: center;">
             <button id="backBtn" class="back-btn" onclick="showHistory()">←</button>
-            <h1 style="flex:1; margin:0;">ImageSearch</h1>
+            <h1 style="flex:1; margin:0;">News Image Pro</h1>
         </div>
         <div class="search-container" style="margin-top: 15px;">
             <div class="search-box">
                 <span>🔍</span>
-                <input type="text" id="searchInput" placeholder="इमेज सर्च करें..." onkeypress="if(event.key==='Enter') triggerSearch()">
+                <input type="text" id="searchInput" placeholder="करंट न्यूज़ इमेज सर्च करें..." onkeypress="if(event.key==='Enter') triggerSearch()">
                 <button class="search-btn" onclick="triggerSearch()">खोजें</button>
             </div>
         </div>
@@ -127,7 +143,7 @@ export default {
         <ul id="historyList" class="history-list"></ul>
     </div>
 
-    <div id="loading" class="loading">⏳ इमेजेज लोड हो रही हैं...</div>
+    <div id="loading" class="loading">⏳ प्राइवेट सर्वर्स से कनेक्ट हो रहा है...</div>
     <div id="imageGrid" class="image-grid"></div>
 
     <script>
